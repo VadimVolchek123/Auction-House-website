@@ -5,22 +5,22 @@ class AuctionController {
     // Создание нового аукциона
     async create(req, res, next) {
         try {
-            const { productId, start_time, end_time, starting_price, reserve_price } = req.body;
-
-            // Проверка обязательных полей
-            if (!productId || !start_time || !end_time || !starting_price) {
+            console.log('Данные запроса:', req.body); // Логирование данных запроса
+    
+            const { productId, startTime, endTime, startingPrice, reservePrice } = req.body;
+    
+            if (!productId || !startTime || !endTime || !startingPrice) {
                 return next(ApiError.badRequest('Все обязательные поля должны быть заполнены.'));
             }
-
-            // Создание записи аукциона
+    
             const auction = await Auction.create({
                 productId,
-                start_time,
-                end_time,
-                starting_price,
-                reserve_price: reserve_price || null, // Резервная цена необязательна
+                startTime,
+                endTime,
+                startingPrice,
+                reservePrice: reservePrice || null,
             });
-
+    
             return res.status(201).json({
                 message: 'Аукцион успешно создан.',
                 auction,
@@ -30,6 +30,7 @@ class AuctionController {
             next(ApiError.internal('Произошла ошибка при создании аукциона.'));
         }
     }
+    
 
     // Получение всех аукционов
     async getAll(req, res, next) {

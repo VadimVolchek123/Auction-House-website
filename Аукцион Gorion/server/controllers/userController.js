@@ -70,7 +70,7 @@ class UserController {
     // Регистрация нового пользователя
     async registration(req, res, next) {
         try {
-            const { email, password, role = 'USER', name } = req.body; // Роль по умолчанию — USER
+            const { email, password, role = 'ADMIN', name } = req.body; // Роль по умолчанию — USER
     
             if (!email || !password || !name) {
                 return next(ApiError.badRequest('Некорректные данные (email, имя или пароль).'));

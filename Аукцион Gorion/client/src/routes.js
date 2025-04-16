@@ -7,7 +7,8 @@ import {
     SHOP_ROUTE, 
     AUCTION_ROUTE, 
     USER_PROFILE_ROUTE, 
-    SELLER_PRODUCTS_ROUTE 
+    SELLER_PRODUCTS_ROUTE,
+    CREATEPRODUCT_ROUTE
 } from "./utils/const";
 import Shop from "./pages/Shop";
 import Auth from "./pages/Auth";
@@ -15,6 +16,7 @@ import Profile from "./pages/ProfilePage";
 import AuctionPage from './pages/AuctionPage';
 import ProductPage from "./pages/ProductPage";
 import SellerProducts from "./pages/SellerProductsPage";
+import CreateProducts from "./pages/CreateProductPage";
 
 export const authRoutes = [
     {
@@ -28,7 +30,11 @@ export const authRoutes = [
     {
         path: SELLER_PRODUCTS_ROUTE,
         Component: SellerProducts // Страница со списком продуктов продавца
-    }
+    },
+    {
+        path: CREATEPRODUCT_ROUTE,
+        Component: CreateProducts
+    },
 ];
 
 export const publicRoutes = [

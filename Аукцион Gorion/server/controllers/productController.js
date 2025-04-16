@@ -4,10 +4,10 @@ const { Product, ProductInfo, Seller } = require('../model');
 const ApiError = require('../Error/errorApi');
 
 class ProductController {
-    // Создание продукта
+
     async create(req, res, next) {
         try {
-            let { name, description, status, sellerId, typeId, info } = req.body; 
+            const { name, description, status, sellerId, typeId, info } = req.body;
             const { img } = req.files;
 
             // Проверка обязательных полей
@@ -16,14 +16,14 @@ class ProductController {
             }
 
             // Генерация уникального имени файла для изображения
-            let fileName = uuid.v4() + ".jpg";
-            img.mv(path.resolve(__dirname, '..', 'static', fileName)); // Сохранение файла
+            const fileName = uuid.v4() + ".jpg";
+            await img.mv(path.resolve(__dirname, '..', 'static', fileName)); // Сохранение файла
 
             // Создание продукта
             const product = await Product.create({
                 name,
                 description,
-                status: status || 'AVAILABLE', 
+                status: status || 'AVAILABLE',
                 sellerId,
                 typeId,
                 img: fileName,
@@ -31,87 +31,99 @@ class ProductController {
 
             // Обработка дополнительной информации (info)
             if (info) {
-                info = JSON.parse(info); 
-                info.forEach(i => 
-                    ProductInfo.create({
-                        main_info: i.main_info,
-                        secondary_info: i.secondary_info,
+                const parsedInfo = JSON.parse(info); // Парсинг строки JSON
+                parsedInfo.forEach(async (item) => {
+                    await ProductInfo.create({
+                        main_info: item.main_info,
+                        secondary_info: item.secondary_info,
                         productId: product.id,
-                    })
-                );
+                    });
+                });
             }
 
             return res.status(201).json(product);
-        } catch (e) {
-            console.error('Ошибка при создании продукта:', e.message);
+        } catch (error) {
+            console.error('Ошибка при создании продукта:', error.message);
             next(ApiError.badRequest('Ошибка при создании продукта.'));
         }
     }
 
-    // Получение всех продуктов
     async getAll(req, res) {
         try {
             let { sellerId, typeId, limit, page } = req.query;
-            page = page || 1;
-            limit = limit || 9;
-            let offset = page * limit - limit;
+            page = parseInt(page, 10) || 1;
+            limit = parseInt(limit, 10) || 9;
+            const offset = (page - 1) * limit;
 
-            let queryOptions = { limit, offset };
+            const queryOptions = { limit, offset };
 
-            // Добавляем фильтры в зависимости от наличия sellerId и typeId
+            // Добавляем фильтры
             if (sellerId) queryOptions.where = { sellerId };
             if (typeId) queryOptions.where = { ...queryOptions.where, typeId };
 
             const products = await Product.findAndCountAll(queryOptions);
 
             return res.status(200).json(products);
-        } catch (e) {
-            console.error('Ошибка при получении всех продуктов:', e.message);
+        } catch (error) {
+            console.error('Ошибка при получении всех продуктов:', error.message);
             return res.status(500).json({ message: 'Ошибка при получении всех продуктов.' });
         }
     }
-
-    // Получение всех продуктов конкретного продавца
+      
     async getAllBySeller(req, res, next) {
         try {
-            const { sellerId } = req.params;
-
-            // Проверка: передан ли sellerId
-            if (!sellerId) {
-                return next(ApiError.badRequest('ID продавца не указан.'));
-            }
-
-            // Получение продуктов, связанных с конкретным продавцом
-            const products = await Product.findAll({
-                where: { sellerId },
-                include: [
-                    { model: ProductInfo, as: 'info' }, // Информация о продукте
-                    { model: Seller, attributes: ['id', 'userId', 'rating'] }, // Информация о продавце
-                ],
-            });
-
-            if (!products.length) {
-                return res.status(404).json({ message: 'Продукты для данного продавца не найдены.' });
-            }
-
-            return res.status(200).json(products);
-        } catch (e) {
-            console.error('Ошибка при получении продуктов продавца:', e.message);
-            next(ApiError.internal('Ошибка при получении продуктов продавца.'));
+          // Приводим sellerId к числу и проверяем корректность
+          const sellerId = parseInt(req.params.sellerId, 10);
+          if (isNaN(sellerId)) {
+            return next(ApiError.badRequest('ID продавца указан некорректно.'));
+          }
+      
+          // Извлекаем параметры пагинации и приводим их к числовому значению
+          let { page, limit } = req.query;
+          page = parseInt(page, 10) || 1;
+          limit = parseInt(limit, 10) || 9;
+          const offset = (page - 1) * limit;
+      
+          console.log(`Запрос продуктов для sellerId: ${sellerId}, page: ${page}, limit: ${limit}`);
+      
+          // Выполняем запрос с пагинацией, включая связанные модели
+          const products = await Product.findAndCountAll({
+            where: { sellerId },
+            limit,
+            offset,
+            include: [
+              { model: ProductInfo, as: 'info' },
+              // Удаляем "rating" из запрашиваемых атрибутов, т.к. его нет в таблице seller
+              { model: Seller, attributes: ['id', 'userId'] },
+            ],
+          });
+      
+          console.log(`Найдено продуктов: ${products.count}`);
+      
+          if (!products.rows.length) {
+            return res.status(404).json({ message: 'Продукты для данного продавца не найдены.' });
+          }
+      
+          return res.status(200).json({
+            rows: products.rows,
+            count: products.count,
+          });
+        } catch (error) {
+          console.error('Ошибка при получении продуктов продавца:', error.message);
+          console.error(error.stack);
+          return next(ApiError.internal('Ошибка при получении продуктов продавца.'));
         }
-    }
-
-    // Получение одного продукта
+      }
+      
     async getOne(req, res, next) {
         try {
             const { id } = req.params;
 
-            // Поиск продукта
             const product = await Product.findOne({
                 where: { id },
                 include: [
-                    { model: ProductInfo, as: 'info' }, 
-                    { model: Seller, attributes: ['id', 'userId', 'rating'] }, 
+                    { model: ProductInfo, as: 'info' },
+                    { model: Seller, attributes: ['id', 'userId', 'rating'] },
                 ],
             });
 
@@ -120,8 +132,8 @@ class ProductController {
             }
 
             return res.status(200).json(product);
-        } catch (e) {
-            console.error('Ошибка при получении продукта:', e.message);
+        } catch (error) {
+            console.error('Ошибка при получении продукта:', error.message);
             next(ApiError.internal('Ошибка при получении продукта.'));
         }
     }

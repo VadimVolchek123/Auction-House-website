@@ -1,41 +1,32 @@
-import React from "react";
-import { Card, Col } from "react-bootstrap";
-import Image from "react-bootstrap/Image";
-import { useNavigate } from "react-router-dom";
-import { PRODUCT_ROUTE } from "../utils/const";
-import "./Product.css";
+import React from 'react';
+import { Card } from 'react-bootstrap';
+import Image from 'react-bootstrap/Image';
 
 const Product = ({ product }) => {
-    const navigate = useNavigate();
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const productImage = product.img ? `${baseUrl}/${product.img}` : 'fallback-image.jpg';
 
-    // Базовый URL для API
-    const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-    // Условно проверяем наличие изображения
-    const productImage = product.img ? `${baseUrl}/${product.img}` : "fallback-image.jpg";
-
-    // Убедитесь, что поля аукциона соответствуют новой модели
     return (
-        <Col md={3} className="mt-3" onClick={() => navigate(`${PRODUCT_ROUTE}/${product.id}`)}>
-            <Card className="card-product">
-                {/* Отображение изображения продукта */}
-                <Image src={productImage} alt={product.name || "Product Image"} className="product-image" />
-
-                {/* Название продукта */}
-                <div className="card-title">
-                    {product.name || "Без названия"}
-                </div>
-
-                {/* Информация о продукте и аукционе */}
-                <div className="auction-details">
-                    <p><strong>Продавец:</strong> {product.seller?.name || "Не указан"}</p>
-                    <p><strong>Описание:</strong> {product.description || "Описание отсутствует"}</p>
-                    <p><strong>Начало аукциона:</strong> {product.auction?.startTime || "Не указано"}</p>
-                    <p><strong>Конец аукциона:</strong> {product.auction?.endTime || "Не указано"}</p>
-                    <p><strong>Начальная цена:</strong> {product.auction?.startingPrice || "Не указано"} $</p>
-                </div>
-            </Card>
-        </Col>
+        <Card className="mb-3">
+            <Image src={productImage} alt={product.name} fluid />
+            <Card.Body>
+                <Card.Title>{product.name}</Card.Title>
+                <Card.Text>{product.description}</Card.Text>
+                {product.auction ? (
+                    <Card.Text>
+                        <strong>Аукцион:</strong> Стартовая цена {product.auction.starting_price}$
+                        <br />
+                        <strong>Начало:</strong> {new Date(product.auction.start_time).toLocaleString()}
+                        <br />
+                        <strong>Конец:</strong> {new Date(product.auction.end_time).toLocaleString()}
+                    </Card.Text>
+                ) : (
+                    <Card.Text>
+                        Этот продукт не участвует в аукционе.
+                    </Card.Text>
+                )}
+            </Card.Body>
+        </Card>
     );
 };
 

@@ -1,53 +1,87 @@
 import { $authHost, $host } from "./index";
 
-// Работа с продуктами
+// Создание продукта
 export const createProduct = async (product) => {
-    const { data } = await $authHost.post('api/product', product);
-    return data; // Создать продукт
+  const { data } = await $authHost.post('api/product', product);
+  return data;
 };
 
-export const fetchProducts = async (page = 1, limit = 5) => {
-    const { data: productData } = await $host.get('api/product', {
-        params: { page, limit },
-    });
-    const { data: auctionData } = await $host.get('api/auction'); // Запрос данных об аукционах
-    const { data: sellerData } = await $host.get('api/seller'); // Запрос данных о продавцах
+// Получение продуктов без аукционов конкретного продавца
+export const fetchProductsWithoutAuctionBySeller = async (sellerId, page = 1, limit = 5) => {
+  // Запрашиваем продукты продавца (возвращается объект { rows, count })
+  const { data: productData } = await $host.get(`api/product/seller/${sellerId}`, {
+    params: { page, limit },
+  });
+  
+  // Запрашиваем данные о продавце по его ID
+  const { data: sellerData } = await $host.get(`api/product/seller/${sellerId}`);
+  
+  // К каждому продукту прикрепляем данные продавца
+  const productsWithoutAuction = productData.rows.map((product) => ({
+    ...product,
+    seller: sellerData || null,
+  }));
+  
+  return {
+    productsWithoutAuction,
+    count: productData.count,
+  };
+};
 
-    // Соединение продуктов с аукционами и продавцами по соответствующим ID
-    const combinedData = productData.rows.map((product) => {
-        const auction = auctionData.find((auc) => auc.productId === product.id);
-        const seller = sellerData.find((sel) => sel.id === product.sellerId);
-        return {
-            ...product,
-            auction: auction || null, // Если аукцион не найден, оставляем `null`
-            seller: seller || null, // Если продавец не найден, оставляем `null`
-        };
-    });
+// Получение продуктов с аукционами конкретного продавца
+export const fetchProductsWithAuctionBySeller = async (sellerId, page = 1, limit = 5) => {
+  // Запрашиваем продукты продавца по маршруту с пагинацией
+  const { data: productData } = await $host.get(`api/product/seller/${sellerId}`, {
+    params: { page, limit },
+  });
+  
+  // Запрашиваем все аукционы
+  const { data: auctionData } = await $host.get('api/auction');
+  
+  // Запрашиваем данные о продавце
+  const { data: sellerData } = await $host.get(`api/seller/${sellerId}`);
+  
+  // Для каждого продукта пытаемся найти соответствующий аукцион по совпадению product.id с auction.productId
+  const productsWithAuction = productData.rows.map((product) => {
+    const auction = auctionData.find((auc) => auc.productId === product.id);
     return {
-        rows: combinedData,
-        count: productData.count,
+      ...product,
+      auction: auction || null,
+      seller: sellerData || null,
     };
+  });
+  
+  return {
+    productsWithAuction,
+    count: productData.count,
+  };
 };
 
+// Получение одного продукта по его ID
 export const fetchOneProduct = async (id) => {
-    const { data: productData } = await $host.get(`api/product/${id}`);
-    const { data: auctionData } = await $host.get(`api/auction`, { params: { productId: id } });
-    const { data: sellerData } = await $host.get(`api/seller/${productData.sellerId}`);
-    
-    return {
-        ...productData,
-        auction: auctionData || null,
-        seller: sellerData || null,
-    };
+  // Получаем данные продукта
+  const { data: productData } = await $host.get(`api/product/${id}`);
+  
+  // Получаем данные об аукционе, если они существуют (фильтруем по productId)
+  const { data: auctionData } = await $host.get('api/auction', { params: { productId: id } });
+  
+  // Получаем данные о продавце данного продукта
+  const { data: sellerData } = await $host.get(`api/seller/${productData.sellerId}`);
+  
+  return {
+    ...productData,
+    auction: auctionData || null,
+    seller: sellerData || null,
+  };
 };
 
 // Работа с типами
 export const createType = async (type) => {
-    const { data } = await $authHost.post('api/type', type);
-    return data; // Создать тип
+  const { data } = await $authHost.post('api/type', type);
+  return data;
 };
 
 export const fetchTypes = async () => {
-    const { data } = await $host.get('api/type');
-    return data; // Получить список типов
+  const { data } = await $host.get('api/type');
+  return data;
 };

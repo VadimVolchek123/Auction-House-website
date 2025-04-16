@@ -5,7 +5,7 @@ import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { Context } from '../index'; // Контекст
-import { ADMIN_ROUTE, LOGIN_ROUTE, REGISTRATION_ROUTE, SHOP_ROUTE, USER_PROFILE_ROUTE } from '../utils/const'; // Маршруты
+import { ADMIN_ROUTE, LOGIN_ROUTE, REGISTRATION_ROUTE, SHOP_ROUTE, USER_PROFILE_ROUTE, CREATEPRODUCT_ROUTE } from '../utils/const'; // Маршруты
 import './Navbar.css'; // Стили
 
 const MergedNavbar = () => {
@@ -65,6 +65,9 @@ const MergedNavbar = () => {
                     </Dropdown.Item>
                     <Dropdown.Item onClick={() => navigate(ADMIN_ROUTE)}>
                       Панель администратора
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => navigate(CREATEPRODUCT_ROUTE)}>
+                      Создать товар
                     </Dropdown.Item>
                     <Dropdown.Item onClick={logOut}>
                       Выход

@@ -3,9 +3,9 @@ const router = new Router();
 
 const productRouter = require('./productRouter'); // Убедитесь, что путь правильный
 const userRouter = require('./userRouter');
+const auctionRouter = require('./auctionRouter');
 const typeRouter = require('./typeRouter');
 const bidRouter = require('./bidRouter');
-const auctionRouter = require('./auctionRouter');
 const reviewRoutes = require('./reviewRoutes');
 
 // Подключение роутеров
