@@ -2,6 +2,7 @@ import { makeAutoObservable, autorun } from "mobx";
 
 export default class UserStore {
     constructor() {
+        this._avatar = null;
         this._id = null;
         this._isAuth = false; // Флаг аутентификации
         this._user = {}; // Основная информация о пользователе
@@ -12,41 +13,30 @@ export default class UserStore {
 
         // Автоматическая проверка изменений состояния аутентификации
         autorun(() => {
-            console.log("isAuth:", this._isAuth, "user:", this._user, "role:", this._role);
+            console.log("isAuth:", this._isAuth, "user:", this._user, "role:", this._role, "buyerId:", this._buyerId, "sellerId:", this._sellerId);
         });
     }
     // Сеттеры
     setUser(userProfile) {
-        // Обновляем основной объект пользователя
+        console.log("setUser получен:", userProfile);
         this._user = userProfile;
-        // Обновляем идентификатор (если он есть в профиле)
         this._id = userProfile.id || null;
-        // Устанавливаем роль пользователя (если поле role отсутствует, то по умолчанию "USER")
         this._role = userProfile.role || "USER";
-        // Если в профиле присутствует информация о покупателе, обновляем поле buyer
-        if (userProfile.buyerId) {
-            this.setBuyer(userProfile.buyer);
-        } else {
-            this._buyerId = null;
-        }
-        // Если в профиле присутствует информация о продавце, обновляем поле seller
-        if (userProfile.sellerId) {
-            this.setSeller(userProfile.seller);
-        } else {
-            this._sellerId = null;
-        }
+        this._buyerId = userProfile.buyerId || null;
+        this._sellerId = userProfile.sellerId || null;
     }
+    
 
     setIsAuth(bool) {
         this._isAuth = bool;
     }
 
-    setBuyer(buyerId) {
-        this._buyer = buyerId; // Устанавливаем информацию о покупателе
+    setBuyerId(userProfile) {
+        this._buyerId = userProfile.buyerId; // Устанавливаем информацию о покупателе
     }
 
-    setSeller(sellerId) {
-        this._seller = sellerId; // Устанавливаем информацию о продавце
+    setSellerId(userProfile) {
+        this._sellerId = userProfile.sellerId; // Устанавливаем информацию о продавце
     }
 
     // Геттеры

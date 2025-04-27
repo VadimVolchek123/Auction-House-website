@@ -5,7 +5,7 @@ import Button from "react-bootstrap/Button";
 import Row from "react-bootstrap/Row";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { LOGIN_ROUTE, REGISTRATION_ROUTE, SHOP_ROUTE } from "../utils/const";
-import { login, registration } from "../http/userAPI";
+import { login, registration, fetchUserProfile } from "../http/userAPI";
 import { observer } from "mobx-react-lite";
 import { Context } from "../index";
 
@@ -24,20 +24,25 @@ const Auth = observer(() => {
     const handleClick = async () => {
         try {
             let data;
-
-            if (isLogin) {
-                // Логика авторизации
-                data = await login(email, password);
-            } else {
-                // Логика регистрации
-                data = await registration(email, password, name);
-            }
-
-            user.setUser(data); // Сохраняем данные пользователя в хранилище
             user.setIsAuth(true); // Устанавливаем флаг авторизации
             navigate(SHOP_ROUTE); // Перенаправляем на главную страницу
+            if (isLogin) {
+                // Авторизация: login возвращает, например, только токен
+                data = await login(email, password);
+                // Получает полный профиль пользователя с полями buyerId и sellerId
+                const profileData = await fetchUserProfile();
+                console.log("Fetched profileData:", profileData);
+                console.log("buyerId:", profileData.buyerId, "sellerId:", profileData.sellerId);                
+                user.setUser(profileData);
+            } else {
+                // Регистрация: ожидается, что endpoint возвращает объект с токеном и данными пользователя
+                data = await registration(email, password, name);
+                console.log("registration data", data);
+                // Если в ответе регистрации данные вложены в data.user, можно оставить как есть:
+                user.setUser(data.user);
+            }  
         } catch (error) {
-            alert(error.response?.data?.message || "Произошла ошибка."); // Вывод ошибки
+            alert(error.response?.data?.message || "Произошла ошибка.");
         }
     };
 

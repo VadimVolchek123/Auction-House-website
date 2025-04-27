@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User, Buyer, Seller } = require('../model'); // Подключаем актуальные модели
 
-
 // Функция для генерации JWT токена
 const generateJwt = (id, email, role, name) => {
     return jwt.sign(
@@ -14,14 +13,14 @@ const generateJwt = (id, email, role, name) => {
 };
 
 class UserController {
-    // Получение профиля пользователя
+    // Получение профиля пользователя, теперь возвращает также buyerId и sellerId
     async profile(req, res, next) {
         try {
             const userId = req.user.id; // ID пользователя из токена
 
             const user = await User.findOne({
                 where: { id: userId },
-                attributes: ['id', 'email', 'name', 'avatar', 'role'], // Теперь role включено
+                attributes: ['id', 'email', 'name', 'avatar', 'role', 'buyerId', 'sellerId'] // включаем новые поля
             });
 
             if (!user) {
@@ -35,7 +34,7 @@ class UserController {
         }
     }
 
-    // Обновление данных пользователя
+    // Обновление данных пользователя (оставляем без изменений, если логика не зависит от buyerId/sellerId)
     async update(req, res, next) {
         try {
             const userId = req.user.id; // ID текущего пользователя
@@ -67,10 +66,11 @@ class UserController {
         }
     }
 
-    // Регистрация нового пользователя
+    // Регистрация нового пользователя с сохранением buyerId и sellerId
     async registration(req, res, next) {
         try {
-            const { email, password, role = 'ADMIN', name } = req.body; // Роль по умолчанию — USER
+            // Обратите внимание: в req.body можно передавать роль, но по умолчанию роль у пользователя чаще "USER"
+            const { email, password, role = 'USER', name } = req.body;
     
             if (!email || !password || !name) {
                 return next(ApiError.badRequest('Некорректные данные (email, имя или пароль).'));
@@ -82,22 +82,40 @@ class UserController {
             }
     
             const hashPassword = await bcrypt.hash(password, 5);
-            const user = await User.create({ email, password: hashPassword, role, name });
+            // Создаем пользователя (без buyerId и sellerId на данном этапе)
+            let user = await User.create({ email, password: hashPassword, role, name });
     
             // Независимо от роли, создаём записи для покупателя и продавца
-            await Buyer.create({ userId: user.id, phone: null });
-            await Seller.create({ userId: user.id, soldItems: null });
+            const buyerRecord = await Buyer.create({ userId: user.id, phone: null });
+            const sellerRecord = await Seller.create({ userId: user.id, soldItems: null });
+    
+            // Обновляем созданного пользователя, добавляя полученные идентификаторы
+            user.buyerId = buyerRecord.id;
+            user.sellerId = sellerRecord.id;
+            await user.save();
     
             const token = generateJwt(user.id, user.email, user.role, user.name);
     
-            return res.status(201).json({ token, message: `Пользователь зарегистрирован с ролью ${role}.` });
+            return res.status(201).json({ 
+                token, 
+                message: `Пользователь зарегистрирован с ролью ${role}.`,
+                // При необходимости можно вернуть и объединенный профиль:
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    avatar: user.avatar,
+                    role: user.role,
+                    buyerId: user.buyerId,
+                    sellerId: user.sellerId
+                }
+            });
         } catch (error) {
             console.error('Ошибка при регистрации пользователя:', error);
             next(ApiError.internal('Ошибка при регистрации.'));
         }
     }
     
-
     // Авторизация пользователя
     async login(req, res, next) {
         const { email, password } = req.body;
