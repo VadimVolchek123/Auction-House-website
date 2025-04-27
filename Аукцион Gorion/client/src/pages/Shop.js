@@ -4,91 +4,76 @@ import ProductL from "../components/ProductL";
 import Carousel from "../components/Carousels";
 import { observer } from "mobx-react-lite";
 import { Context } from "../index";
-import { fetchTypes, fetchProductsWithoutAuctionBySeller, fetchProductsWithAuctionBySeller } from "../http/productAPI";
+import { fetchTypes, fetchAllProducts } from "../http/productAPI";
 import Pages from "../components/Pages";
 
 const Shop = observer(() => {
-    const { product } = useContext(Context);
+  const { product } = useContext(Context);
 
-    if (!product) {
-        console.error("Контекст product не определён.");
-        return <div>Ошибка загрузки данных.</div>;
-    }
+  if (!product) {
+    console.error("Контекст product не определён.");
+    return <div>Ошибка загрузки данных.</div>;
+  }
 
-    const sellerId = 1; // Здесь укажите ID продавца, по которому вы хотите загрузить продукты
+  // Начальная загрузка типов и первых товаров
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Загружаем типы продуктов
+        const types = await fetchTypes();
+        product.setTypes(types);
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                // Загружаем типы продуктов
-                const types = await fetchTypes();
-                product.setTypes(types);
+        // Загружаем все товары (первую страницу)
+        const { products, count } = await fetchAllProducts(1, product.limit);
+        product.setProducts(products);
+        product.setCount(count);
+      } catch (error) {
+        console.error("Ошибка загрузки данных:", error);
+      }
+    };
 
-                // Загружаем продукты без аукционов для конкретного продавца
-                const { productsWithoutAuction } = await fetchProductsWithoutAuctionBySeller(sellerId, 1, product.limit);
-                product.setProductsWithoutAuction(productsWithoutAuction);
+    loadData();
+  }, [product.limit]);
 
-                // Загружаем продукты с аукционами для конкретного продавца
-                const { productsWithAuction } = await fetchProductsWithAuctionBySeller(sellerId, 1, product.limit);
-                product.setProductsWithAuction(productsWithAuction);
-            } catch (error) {
-                console.error("Ошибка загрузки данных:", error);
-            }
-        };
+  // Загрузка товаров при изменении номера страницы или лимита
+  useEffect(() => {
+    const loadFilteredProducts = async () => {
+      try {
+        const { products, count } = await fetchAllProducts(product.page, product.limit);
+        product.setProducts(products);
+        product.setCount(count);
+      } catch (error) {
+        console.error("Ошибка загрузки продуктов:", error);
+      }
+    };
 
-        loadData();
-    }, [sellerId, product.limit]);
+    loadFilteredProducts();
+  }, [product.page, product.limit]);
 
-    useEffect(() => {
-        const loadFilteredProducts = async () => {
-            try {
-                // Фильтрация продуктов без аукционов
-                const { productsWithoutAuction } = await fetchProductsWithoutAuctionBySeller(sellerId, product.page, product.limit);
-                product.setProductsWithoutAuction(productsWithoutAuction);
+  return (
+    <Container>
+      <Carousel />
+      <Row className="mt-3">
+        <Col md={12}>
+          <h2 className="text-center">Магазин продуктов</h2>
+        </Col>
+      </Row>
 
-                // Фильтрация продуктов с аукционами
-                const { productsWithAuction } = await fetchProductsWithAuctionBySeller(sellerId, product.page, product.limit);
-                product.setProductsWithAuction(productsWithAuction);
-            } catch (error) {
-                console.error("Ошибка загрузки продуктов:", error);
-            }
-        };
+      {/* Вывод всех товаров */}
+      <Row className="mt-3">
+        <Col md={12}>
+          <h3>Все товары</h3>
+          <ProductL products={product.products} />
+        </Col>
+      </Row>
 
-        loadFilteredProducts();
-    }, [sellerId, product.page, product.limit]);
-
-    return (
-        <Container>
-            <Carousel />
-            <Row className="mt-3">
-                <Col md={12}>
-                    <h2 className="text-center">Магазин продуктов</h2>
-                </Col>
-            </Row>
-
-            {/* Продукты с аукционами */}
-            <Row className="mt-3">
-                <Col md={12}>
-                    <h3>Продукты с аукционами</h3>
-                    <ProductL products={product.productsWithAuction} />
-                </Col>
-            </Row>
-
-            {/* Продукты без аукционов */}
-            <Row className="mt-3">
-                <Col md={12}>
-                    <h3>Продукты без аукционов</h3>
-                    <ProductL products={product.productsWithoutAuction} />
-                </Col>
-            </Row>
-
-            <Row className="mt-3">
-                <Col md={9}>
-                    <Pages />
-                </Col>
-            </Row>
-        </Container>
-    );
+      <Row className="mt-3">
+        <Col md={9}>
+          <Pages />
+        </Col>
+      </Row>
+    </Container>
+  );
 });
 
 export default Shop;

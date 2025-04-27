@@ -1,5 +1,5 @@
-const Router = require('express');
-const router = new Router();
+const { Router } = require('express');
+const router = Router();
 const auctionController = require('../controllers/auctionController');
 
 router.post('/', auctionController.create); // Создать аукцион

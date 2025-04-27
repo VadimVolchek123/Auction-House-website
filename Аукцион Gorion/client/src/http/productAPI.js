@@ -6,6 +6,39 @@ export const createProduct = async (product) => {
   return data;
 };
 
+export const fetchAllProducts = async (page = 1, limit = 5) => {
+  // Запрашиваем все продукты (предполагается, что endpoint 'api/product' возвращает пагинированный результат вида { rows, count })
+  const { data: productData } = await $host.get('api/product', {
+    params: { page, limit },
+  });
+
+  // Запрашиваем все аукционы сразу, чтобы не выполнять лишних запросов для каждого продукта
+  const { data: auctionData } = await $host.get('api/auction');
+
+  // Для каждого продукта прикрепляем данные аукциона (если есть) и данные продавца
+  // Обратите внимание, что для получения данных продавца для каждого товара выполняется отдельный запрос,
+  // так как продавцы могут быть разными.
+  const products = await Promise.all(
+    productData.rows.map(async (product) => {
+      // Ищем аукцион, в котором product.id совпадает с auction.productId
+      const auction = auctionData.find((auc) => auc.productId === product.id) || null;
+      // Получаем данные продавца данного продукта
+      const { data: sellerData } = await $host.get(`api/user/seller/${product.sellerId}`);
+
+      return {
+        ...product,
+        auction,
+        seller: sellerData || null,
+      };
+    })
+  );
+
+  return {
+    products,
+    count: productData.count,
+  };
+};
+
 // Получение продуктов без аукционов конкретного продавца
 export const fetchProductsWithoutAuctionBySeller = async (sellerId, page = 1, limit = 5) => {
   // Запрашиваем продукты продавца (возвращается объект { rows, count })

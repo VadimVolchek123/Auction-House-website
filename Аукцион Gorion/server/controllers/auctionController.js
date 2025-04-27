@@ -7,20 +7,20 @@ class AuctionController {
         try {
             console.log('Данные запроса:', req.body); // Логирование данных запроса
     
-            const { productId, startTime, endTime, startingPrice, reservePrice } = req.body;
-    
-            if (!productId || !startTime || !endTime || !startingPrice) {
-                return next(ApiError.badRequest('Все обязательные поля должны быть заполнены.'));
-            }
-    
-            const auction = await Auction.create({
-                productId,
-                startTime,
-                endTime,
-                startingPrice,
-                reservePrice: reservePrice || null,
-            });
-    
+            const { productId, startTime, endTime, startingPrice, reservePrice, description } = req.body;
+
+        if (!productId || !startTime || !endTime || !startingPrice || !description) {
+            return next(ApiError.badRequest('Все обязательные поля должны быть заполнены.'));
+        }
+        const auction = await Auction.create({
+            productId,
+            startTime,
+            endTime,
+            startingPrice,
+            reservePrice: reservePrice || 0,
+            description: description || '' // теперь передаём значение description
+        });
+            console.log('Привет');
             return res.status(201).json({
                 message: 'Аукцион успешно создан.',
                 auction,
@@ -41,7 +41,7 @@ class AuctionController {
                     { model: Product, attributes: ['id', 'name', 'description', 'status'] }, // Информация о продукте
                 ],
             });
-
+            
             if (!auctions.length) {
                 return res.status(404).json({ message: 'Аукционы не найдены.' });
             }

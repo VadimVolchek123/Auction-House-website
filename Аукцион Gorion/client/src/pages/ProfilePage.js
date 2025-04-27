@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 import { fetchUserProfile, updateUserProfile } from '../http/userAPI'; // Импорт функций API
+import UserProductsWithoutAuction from '../components/UserProductList';
 
 const ProfilePage = () => {
     const [user, setUser] = useState(null); // Состояние для данных пользователя
@@ -129,6 +130,7 @@ const ProfilePage = () => {
                     </Card>
                 </Col>
             </Row>
+            <UserProductsWithoutAuction />
         </Container>
     );
 };
