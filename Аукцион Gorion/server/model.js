@@ -3,12 +3,45 @@ const { DataTypes } = require('sequelize');
 
 // Таблица: Пользователь
 const User = sequelize.define('user', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    email: { type: DataTypes.STRING, unique: true, allowNull: false },
-    password: { type: DataTypes.STRING, allowNull: false },
-    avatar: { type: DataTypes.STRING, allowNull: true },
-    role: { type: DataTypes.STRING, defaultValue: "USER" },
-    name: { type: DataTypes.STRING, allowNull: false }
+    id: { 
+        type: DataTypes.INTEGER, 
+        primaryKey: true, 
+        autoIncrement: true 
+    },
+    email: { 
+        type: DataTypes.STRING, 
+        unique: true, 
+        allowNull: false 
+    },
+    password: { 
+        type: DataTypes.STRING, 
+        allowNull: false 
+    },
+    avatar: { 
+        type: DataTypes.STRING, 
+        allowNull: true 
+    },
+    role: { 
+        type: DataTypes.STRING, 
+        defaultValue: "USER" 
+    },
+    name: { 
+        type: DataTypes.STRING, 
+        allowNull: false 
+    },
+    // Новые поля для хранения идентификаторов покупателя и продавца:
+    buyerId: { 
+        type: DataTypes.INTEGER, 
+        allowNull: true,
+        // Если таблица с покупателями называется 'buyers'
+        references: { model: 'buyers', key: 'id' }
+    },
+    sellerId: { 
+        type: DataTypes.INTEGER, 
+        allowNull: true,
+        // Если таблица с продавцами называется 'sellers'
+        references: { model: 'sellers', key: 'id' }
+    }
 });
 
 // Таблица: Продавец
@@ -120,7 +153,8 @@ const ProductInfo = sequelize.define('product_info', {
 });
 
 // Связи между таблицами
-
+User.belongsTo(Buyer, { foreignKey: 'buyerId', as: 'buyerProfile' });
+User.belongsTo(Seller, { foreignKey: 'sellerId', as: 'sellerProfile' });
 // User - Buyer
 User.hasOne(Buyer, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Buyer.belongsTo(User, { foreignKey: 'userId' });
