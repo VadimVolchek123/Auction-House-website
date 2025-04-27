@@ -1,9 +1,10 @@
 import React, { useContext } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import { Context } from '../index'; // Контекст приложения
+import {observer} from "mobx-react-lite";
 //import './ProfilePage.css'; // Ваши стили
 
-const ProfilePage = () => {
+const ProfilePage = observer(() => {
   const { user } = useContext(Context); // Получаем данные пользователя из контекста
   if (!user) {
     console.error('Контекст user не определён.');
@@ -31,6 +32,6 @@ const ProfilePage = () => {
       </Row>
     </Container>
   );
-};
+});
 
 export default ProfilePage;

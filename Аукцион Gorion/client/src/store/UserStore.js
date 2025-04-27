@@ -2,35 +2,51 @@ import { makeAutoObservable, autorun } from "mobx";
 
 export default class UserStore {
     constructor() {
+        this._id = null;
         this._isAuth = false; // Флаг аутентификации
         this._user = {}; // Основная информация о пользователе
-        this._buyer = null; // Информация о покупателе
-        this._seller = null; // Информация о продавце
+        this._buyerId = null; // Информация о покупателе
+        this._sellerId = null; // Информация о продавце
         this._role = "USER"; // Роль пользователя (по умолчанию USER)
         makeAutoObservable(this);
 
         // Автоматическая проверка изменений состояния аутентификации
         autorun(() => {
-            console.log("isAuth изменился на:", this._isAuth);
+            console.log("isAuth:", this._isAuth, "user:", this._user, "role:", this._role);
         });
     }
-
     // Сеттеры
+    setUser(userProfile) {
+        // Обновляем основной объект пользователя
+        this._user = userProfile;
+        // Обновляем идентификатор (если он есть в профиле)
+        this._id = userProfile.id || null;
+        // Устанавливаем роль пользователя (если поле role отсутствует, то по умолчанию "USER")
+        this._role = userProfile.role || "USER";
+        // Если в профиле присутствует информация о покупателе, обновляем поле buyer
+        if (userProfile.buyerId) {
+            this.setBuyer(userProfile.buyer);
+        } else {
+            this._buyerId = null;
+        }
+        // Если в профиле присутствует информация о продавце, обновляем поле seller
+        if (userProfile.sellerId) {
+            this.setSeller(userProfile.seller);
+        } else {
+            this._sellerId = null;
+        }
+    }
+
     setIsAuth(bool) {
         this._isAuth = bool;
     }
 
-    setUser(user) {
-        this._user = user;
-        this._role = user.role || "USER"; // Устанавливаем роль из объекта пользователя
+    setBuyer(buyerId) {
+        this._buyer = buyerId; // Устанавливаем информацию о покупателе
     }
 
-    setBuyer(buyer) {
-        this._buyer = buyer; // Устанавливаем информацию о покупателе
-    }
-
-    setSeller(seller) {
-        this._seller = seller; // Устанавливаем информацию о продавце
+    setSeller(sellerId) {
+        this._seller = sellerId; // Устанавливаем информацию о продавце
     }
 
     // Геттеры
@@ -46,11 +62,11 @@ export default class UserStore {
         return this._role;
     }
 
-    get buyer() {
-        return this._buyer;
+    get buyerId() {
+        return this._buyerId;
     }
 
-    get seller() {
-        return this._seller;
+    get sellerId() {
+        return this._sellerId;
     }
 }

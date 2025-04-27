@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 import { fetchUserProfile, updateUserProfile } from '../http/userAPI'; // Импорт функций API
 import UserProductsWithoutAuction from '../components/UserProductList';
+import { observer } from "mobx-react-lite";
 
-const ProfilePage = () => {
+const ProfilePage = observer(() => {
     const [user, setUser] = useState(null); // Состояние для данных пользователя
     const [loading, setLoading] = useState(true); // Состояние загрузки
     const [error, setError] = useState(null); // Состояние ошибки
@@ -133,6 +134,6 @@ const ProfilePage = () => {
             <UserProductsWithoutAuction />
         </Container>
     );
-};
+});
 
 export default ProfilePage;

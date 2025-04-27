@@ -3,8 +3,9 @@ import { Container, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { Context } from "../index";
 import { fetchProductsWithoutAuctionBySeller } from "../http/productAPI";
 import ProductL from "../components/ProductL";
+import {observer} from "mobx-react-lite";
 
-const UserProductsWithoutAuction = () => {
+const UserProductsWithoutAuction = observer(() => {
   // Получаем пользователя из контекста (предполагается, что пользователь залогинен)
   const { user } = useContext(Context);
   
@@ -73,6 +74,6 @@ const UserProductsWithoutAuction = () => {
       </Row>
     </Container>
   );
-};
+});
 
 export default UserProductsWithoutAuction;
