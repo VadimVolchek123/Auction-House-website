@@ -35,23 +35,20 @@ class AuctionController {
     // Получение всех аукционов
     async getAll(req, res, next) {
         try {
-            // Получение всех аукционов с включением связанных данных (например, продукта)
             const auctions = await Auction.findAll({
-                include: [
-                    { model: Product, attributes: ['id', 'name', 'description', 'status'] }, // Информация о продукте
-                ],
+                include: [{ model: Product, attributes: ['id', 'name', 'description', 'status'] }],
             });
-            
+            console.log("Found auctions:", auctions);
             if (!auctions.length) {
                 return res.status(404).json({ message: 'Аукционы не найдены.' });
             }
-
             return res.status(200).json(auctions);
         } catch (error) {
-            console.error('Ошибка при получении всех аукционов:', error.message);
+            console.error('Ошибка при получении всех аукционов:', error);
             next(ApiError.internal('Произошла ошибка при получении всех аукционов.'));
         }
-    }
+     }
+     
 
     // Получение конкретного аукциона по ID
     async getOne(req, res, next) {

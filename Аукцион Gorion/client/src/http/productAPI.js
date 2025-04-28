@@ -8,22 +8,41 @@ export const createProduct = async (product) => {
 
 export const fetchAllProducts = async (page = 1, limit = 5) => {
   // Запрашиваем все продукты (предполагается, что endpoint 'api/product' возвращает пагинированный результат вида { rows, count })
-  const { data: productData } = await $host.get('api/product', {
+  const { data: productData } = await $host.get('/api/product', {
     params: { page, limit },
   });
 
+  // Объявляем переменную auctionData заранее
+  let auctionData = [];
   // Запрашиваем все аукционы сразу, чтобы не выполнять лишних запросов для каждого продукта
-  const { data: auctionData } = await $host.get('api/auction');
+  try {
+    const response = await $host.get('/api/auction');
+    auctionData = response.data;
+    //console.log('Auction Data:', auctionData);
+  } catch (error) {
+    console.error('Ошибка в запросе:', error.response || error);
+    // Можно задать auctionData как пустой массив или завершить выполнение
+    auctionData = [];
+  }
 
   // Для каждого продукта прикрепляем данные аукциона (если есть) и данные продавца
-  // Обратите внимание, что для получения данных продавца для каждого товара выполняется отдельный запрос,
-  // так как продавцы могут быть разными.
   const products = await Promise.all(
     productData.rows.map(async (product) => {
       // Ищем аукцион, в котором product.id совпадает с auction.productId
-      const auction = auctionData.find((auc) => auc.productId === product.id) || null;
+      const auction =
+        auctionData.find((auc) => auc.productId === product.id) || null;
       // Получаем данные продавца данного продукта
-      const { data: sellerData } = await $host.get(`api/user/seller/${product.sellerId}`);
+      // console.log('Product ID:', product.id, 'Seller ID:', product.sellerId);
+      let sellerData = null;
+  if (product.sellerId) {
+    try {
+        const response = await $host.get(`/api/user/seller/${product.sellerId}`);
+        sellerData = response.data;
+    } catch (error) {
+        console.error(`Ошибка при получении данных продавца для sellerId ${product.sellerId}:`, error);
+    }
+}
+
 
       return {
         ...product,
@@ -38,6 +57,7 @@ export const fetchAllProducts = async (page = 1, limit = 5) => {
     count: productData.count,
   };
 };
+
 
 // Получение продуктов без аукционов конкретного продавца
 export const fetchProductsWithoutAuctionBySeller = async (sellerId, page = 1, limit = 5) => {

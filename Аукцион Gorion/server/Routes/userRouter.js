@@ -10,7 +10,7 @@ router.put('/updateUser', authMiddleware, userController.update); // Обнов�
 router.get('/profile', authMiddleware, userController.profile); // Получение данных профиля
 
 // Новый маршрут для получения покупателя или продавца
-router.get('/buyer/:id', authMiddleware, userController.getBuyerInfo); // Информация о покупателе
-router.get('/seller/:id', authMiddleware, userController.getSellerInfo); // Информация о продавце
+router.get('/buyer/:id', userController.getBuyerInfo); // Информация о покупателе
+router.get('/seller/:id', userController.getSellerInfo); // Информация о продавце
 
 module.exports = router;
