@@ -30,7 +30,8 @@ export const fetchAllProducts = async (page = 1, limit = 5) => {
     productData.rows.map(async (product) => {
       // Ищем аукцион, в котором product.id совпадает с auction.productId
       const auction =
-        auctionData.find((auc) => auc.productId === product.id) || null;
+      auctionData.find((auc) => Number(auc.productId) === Number(product.id)) || null;
+        console.log(`Продукт ${product.id}: аукцион: `, auction);
       // Получаем данные продавца данного продукта
       // console.log('Product ID:', product.id, 'Seller ID:', product.sellerId);
       let sellerData = null;

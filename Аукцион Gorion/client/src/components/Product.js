@@ -14,11 +14,11 @@ const Product = ({ product }) => {
                 <Card.Text>{product.description}</Card.Text>
                 {product.auction ? (
                     <Card.Text>
-                        <strong>Аукцион:</strong> Стартовая цена {product.auction.starting_price}$
+                        <strong>Аукцион:</strong> Стартовая цена {product.auction.startingPrice}$
                         <br />
-                        <strong>Начало:</strong> {new Date(product.auction.start_time).toLocaleString()}
+                        <strong>Начало:</strong> {new Date(product.auction.startTime).toLocaleString()}
                         <br />
-                        <strong>Конец:</strong> {new Date(product.auction.end_time).toLocaleString()}
+                        <strong>Конец:</strong> {new Date(product.auction.endTime).toLocaleString()}
                     </Card.Text>
                 ) : (
                     <Card.Text>
