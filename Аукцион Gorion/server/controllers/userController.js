@@ -3,172 +3,239 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User, Buyer, Seller } = require('../model'); // Подключаем актуальные модели
 
-// Функция для генерации JWT токена
-const generateJwt = (id, email, role, name) => {
-    return jwt.sign(
-        { id, email, role, name },
-        process.env.SECRET_KEY,
-        { expiresIn: '24h' }
-    );
+// Функция генерации JWT токена с расширенным payload
+const generateJwt = (id, email, role, name, buyerId, sellerId) => {
+  return jwt.sign(
+    { id, email, role, name, buyerId, sellerId },
+    process.env.SECRET_KEY,
+    { expiresIn: '24h' }
+  );
 };
 
 class UserController {
-    // Получение профиля пользователя, теперь возвращает также buyerId и sellerId
-    async profile(req, res, next) {
-        try {
-            const userId = req.user.id; // ID пользователя из токена
+  // Получение профиля пользователя с дополнительными полями (buyerId, sellerId)
+  async profile(req, res, next) {
+    try {
+      const userId = req.user.id; // Получаем ID пользователя из токена
 
-            const user = await User.findOne({
-                where: { id: userId },
-                attributes: ['id', 'email', 'name', 'avatar', 'role', 'buyerId', 'sellerId'] // включаем новые поля
-            });
+      const user = await User.findOne({
+        where: { id: userId },
+        attributes: ['id', 'email', 'name', 'avatar', 'role', 'buyerId', 'sellerId']
+      });
 
-            if (!user) {
-                return next(ApiError.badRequest('Пользователь не найден.'));
-            }
+      if (!user) {
+        return next(ApiError.badRequest('Пользователь не найден.'));
+      }
 
-            return res.status(200).json({ user });
-        } catch (error) {
-            console.error('Ошибка при получении профиля пользователя:', error);
-            next(ApiError.internal('Ошибка при получении профиля пользователя.'));
-        }
+      return res.status(200).json({ user });
+    } catch (error) {
+      console.error('Ошибка при получении профиля пользователя:', error);
+      next(ApiError.internal('Ошибка при получении профиля пользователя.'));
     }
+  }
 
-    // Обновление данных пользователя (оставляем без изменений, если логика не зависит от buyerId/sellerId)
-    async update(req, res, next) {
-        try {
-            const userId = req.user.id; // ID текущего пользователя
-            const { email, password, name, avatar } = req.body; // Поля для изменения
+  // Обновление данных пользователя
+  async update(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { email, password, name, avatar } = req.body;
 
-            if (!email && !password && !name && !avatar) {
-                return next(ApiError.badRequest('Не передано ни одно поле для изменения.'));
-            }
+      if (!email && !password && !name && !avatar) {
+        return next(ApiError.badRequest('Не передано ни одно поле для изменения.'));
+      }
 
-            const user = await User.findOne({ where: { id: userId } });
-            if (!user) {
-                return next(ApiError.badRequest('Пользователь не найден.'));
-            }
+      const user = await User.findOne({ where: { id: userId } });
+      if (!user) {
+        return next(ApiError.badRequest('Пользователь не найден.'));
+      }
 
-            if (email) user.email = email;
-            if (name) user.name = name;
-            if (avatar) user.avatar = avatar;
-            if (password) {
-                const hashPassword = await bcrypt.hash(password, 5);
-                user.password = hashPassword;
-            }
+      if (email) user.email = email;
+      if (name) user.name = name;
+      if (avatar) user.avatar = avatar;
+      if (password) {
+        const hashPassword = await bcrypt.hash(password, 5);
+        user.password = hashPassword;
+      }
 
-            await user.save();
+      await user.save();
 
-            return res.status(200).json({ message: 'Профиль обновлён.', user });
-        } catch (error) {
-            console.error('Ошибка при обновлении пользователя:', error);
-            next(ApiError.internal('Ошибка при обновлении профиля.'));
-        }
+      return res.status(200).json({ message: 'Профиль обновлён.', user });
+    } catch (error) {
+      console.error('Ошибка при обновлении пользователя:', error);
+      next(ApiError.internal('Ошибка при обновлении профиля.'));
     }
+  }
 
-    // Регистрация нового пользователя с сохранением buyerId и sellerId
-    async registration(req, res, next) {
-        try {
-            // Обратите внимание: в req.body можно передавать роль, но по умолчанию роль у пользователя чаще "USER"
-            const { email, password, role = 'USER', name } = req.body;
-    
-            if (!email || !password || !name) {
-                return next(ApiError.badRequest('Некорректные данные (email, имя или пароль).'));
-            }
-    
-            const candidate = await User.findOne({ where: { email } });
-            if (candidate) {
-                return next(ApiError.badRequest('Пользователь с таким email уже существует.'));
-            }
-    
-            const hashPassword = await bcrypt.hash(password, 5);
-            // Создаем пользователя (без buyerId и sellerId на данном этапе)
-            let user = await User.create({ email, password: hashPassword, role, name });
-    
-            // Независимо от роли, создаём записи для покупателя и продавца
-            const buyerRecord = await Buyer.create({ userId: user.id, phone: null });
-            const sellerRecord = await Seller.create({ userId: user.id, soldItems: null });
-    
-            // Обновляем созданного пользователя, добавляя полученные идентификаторы
-            user.buyerId = buyerRecord.id;
-            user.sellerId = sellerRecord.id;
-            await user.save();
-    
-            const token = generateJwt(user.id, user.email, user.role, user.name);
-    
-            return res.status(201).json({ 
-                token, 
-                message: `Пользователь зарегистрирован с ролью ${role}.`,
-                // При необходимости можно вернуть и объединенный профиль:
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    avatar: user.avatar,
-                    role: user.role,
-                    buyerId: user.buyerId,
-                    sellerId: user.sellerId
-                }
-            });
-        } catch (error) {
-            console.error('Ошибка при регистрации пользователя:', error);
-            next(ApiError.internal('Ошибка при регистрации.'));
+  // Регистрация нового пользователя с сохранением buyerId и sellerId
+  async registration(req, res, next) {
+    try {
+      const { email, password, role = 'USER', name } = req.body;
+
+      if (!email || !password || !name) {
+        return next(ApiError.badRequest('Некорректные данные (email, имя или пароль).'));
+      }
+
+      const candidate = await User.findOne({ where: { email } });
+      if (candidate) {
+        return next(ApiError.badRequest('Пользователь с таким email уже существует.'));
+      }
+
+      const hashPassword = await bcrypt.hash(password, 5);
+      // Создаем пользователя (на данном этапе buyerId и sellerId отсутствуют)
+      let user = await User.create({ email, password: hashPassword, role, name });
+
+      // Создаем записи для покупателя и продавца
+      const buyerRecord = await Buyer.create({ userId: user.id, phone: null });
+      const sellerRecord = await Seller.create({ userId: user.id, soldItems: null });
+
+      // Обновляем пользователя с полученными идентификаторами
+      user.buyerId = buyerRecord.id;
+      user.sellerId = sellerRecord.id;
+      await user.save();
+
+      // Генерируем токен, передавая расширенный payload
+      const token = generateJwt(
+        user.id,
+        user.email,
+        user.role,
+        user.name,
+        user.buyerId,
+        user.sellerId
+      );
+
+      return res.status(201).json({ 
+        token, 
+        message: `Пользователь зарегистрирован с ролью ${role}.`,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          role: user.role,
+          buyerId: user.buyerId,
+          sellerId: user.sellerId
         }
+      });
+    } catch (error) {
+      console.error('Ошибка при регистрации пользователя:', error);
+      next(ApiError.internal('Ошибка при регистрации.'));
     }
-    
-    // Авторизация пользователя
-    async login(req, res, next) {
-        const { email, password } = req.body;
+  }
 
-        const user = await User.findOne({ where: { email } });
-        if (!user) {
-            return next(ApiError.badRequest('Пользователь не найден.'));
-        }
+  // Авторизация пользователя
+  async login(req, res, next) {
+    try {
+      const { email, password } = req.body;
 
-        const comparePassword = bcrypt.compareSync(password, user.password);
-        if (!comparePassword) {
-            return next(ApiError.badRequest('Неверный пароль.'));
-        }
+      const user = await User.findOne({
+        where: { email },
+        attributes: ['id', 'email', 'password', 'role', 'name', 'buyerId', 'sellerId']
+      });
+      if (!user) {
+        return next(ApiError.badRequest('Пользователь не найден.'));
+      }
 
-        const token = generateJwt(user.id, user.email, user.role, user.name);
-        return res.status(200).json({ token });
+      const comparePassword = bcrypt.compareSync(password, user.password);
+      if (!comparePassword) {
+        return next(ApiError.badRequest('Неверный пароль.'));
+      }
+
+      const token = generateJwt(
+        user.id,
+        user.email,
+        user.role,
+        user.name,
+        user.buyerId,
+        user.sellerId
+      );
+      return res.status(200).json({ token });
+    } catch (error) {
+      console.error('Ошибка при авторизации пользователя:', error);
+      next(ApiError.internal('Ошибка при авторизации.'));
     }
+  }
 
-    // Проверка авторизации (получение нового токена)
-    async check(req, res, next) {
-        const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.name);
-        return res.status(200).json({ token });
+  // Проверка авторизации (обновление токена)
+  async check(req, res, next) {
+    try {
+      const token = generateJwt(
+        req.user.id,
+        req.user.email,
+        req.user.role,
+        req.user.name,
+        req.user.buyerId,
+        req.user.sellerId
+      );
+      return res.status(200).json({ token });
+    } catch (error) {
+      console.error('Ошибка при проверке авторизации:', error);
+      next(ApiError.internal('Ошибка при проверке авторизации.'));
     }
+  }
 
-    // Получение данных покупателя
-    async getBuyerInfo(req, res, next) {
-        try {
-            const userId = req.params.id;
-            const buyer = await Buyer.findOne({ where: { userId } });
-            if (!buyer) {
-                return next(ApiError.badRequest('Покупатель не найден.'));
-            }
-            return res.status(200).json(buyer);
-        } catch (error) {
-            console.error('Ошибка при получении данных покупателя:', error);
-            next(ApiError.internal('Ошибка при получении данных покупателя.'));
-        }
+  // Получение данных покупателя
+  async getBuyerInfo(req, res, next) {
+    try {
+      const userId = req.params.id;
+      const buyer = await Buyer.findOne({ where: { userId } });
+      if (!buyer) {
+        return next(ApiError.badRequest('Покупатель не найден.'));
+      }
+      return res.status(200).json(buyer);
+    } catch (error) {
+      console.error('Ошибка при получении данных покупателя:', error);
+      next(ApiError.internal('Ошибка при получении данных покупателя.'));
     }
+  }
 
-    // Получение данных продавца
-    async getSellerInfo(req, res, next) {
-        try {
-            const userId = req.params.id;
-            const seller = await Seller.findOne({ where: { userId } });
-            if (!seller) {
-                return next(ApiError.badRequest('Продавец не найден.'));
-            }
-            return res.status(200).json(seller);
-        } catch (error) {
-            console.error('Ошибка при получении данных продавца:', error);
-            next(ApiError.internal('Ошибка при получении данных продавца.'));
-        }
+  // Получение данных продавца
+  async getSellerInfo(req, res, next) {
+    try {
+      const userId = req.params.id;
+      const seller = await Seller.findOne({ where: { userId } });
+      if (!seller) {
+        return next(ApiError.badRequest('Продавец не найден.'));
+      }
+      return res.status(200).json(seller);
+    } catch (error) {
+      console.error('Ошибка при получении данных продавца:', error);
+      next(ApiError.internal('Ошибка при получении данных продавца.'));
     }
+  }
+
+  // Получение списка всех пользователей (админ панель)
+  async getAllUsers(req, res, next) {
+    try {
+      // Можно добавить пагинацию, фильтрацию и выбор полей по необходимости
+      const users = await User.findAll({
+        attributes: ['id', 'email', 'name', 'role', 'buyerId', 'sellerId']
+      });
+      return res.status(200).json({ users });
+    } catch (error) {
+      console.error('Ошибка при получении всех пользователей:', error);
+      next(ApiError.internal('Ошибка при получении пользователей.'));
+    }
+  }
+
+  // Удаление пользователя по ID (админ панель)
+  async removeUser(req, res, next) {
+    try {
+      const userId = req.params.id;
+      const user = await User.findOne({ where: { id: userId } });
+      if (!user) {
+        return next(ApiError.badRequest('Пользователь не найден.'));
+      }
+      // При необходимости сначала удаляем связанные записи в Buyer и Seller
+      await Buyer.destroy({ where: { userId } });
+      await Seller.destroy({ where: { userId } });
+
+      await User.destroy({ where: { id: userId } });
+      return res.status(200).json({ message: 'Пользователь удалён.' });
+    } catch (error) {
+      console.error('Ошибка при удалении пользователя:', error);
+      next(ApiError.internal('Ошибка при удалении пользователя.'));
+    }
+  }
 }
 
 module.exports = new UserController();

@@ -8,6 +8,8 @@ router.post('/login', userController.login); // Авторизация
 router.get('/auth', authMiddleware, userController.check); // Проверка авторизации
 router.put('/updateUser', authMiddleware, userController.update); // Обновление данных пользователя
 router.get('/profile', authMiddleware, userController.profile); // Получение данных профиля
+router.get('/all', authMiddleware, userController.getAllUsers);
+router.get('/removeUser', authMiddleware, userController.removeUser);
 
 // Новый маршрут для получения покупателя или продавца
 router.get('/buyer/:id', userController.getBuyerInfo); // Информация о покупателе

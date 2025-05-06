@@ -3,32 +3,49 @@ import { Container, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { Context } from "../index";
 import { fetchProductsWithoutAuctionBySeller } from "../http/productAPI";
 import ProductL from "../components/ProductL";
-import {observer} from "mobx-react-lite";
+import { observer } from "mobx-react-lite";
 
 const UserProductsWithoutAuction = observer(() => {
-  // Получаем пользователя из контекста (предполагается, что пользователь залогинен)
+  // Получаем данные пользователя из контекста
   const { user } = useContext(Context);
-  
-  // Локальное состояние для хранения списка товаров, общего количества, индикаторов загрузки и ошибок
+
+  // Локальные состояния для списка товаров, общего количества и индикаторов загрузки/ошибок
   const [products, setProducts] = useState([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Параметры пагинации (при необходимости можно вынести в глобальное состояние)
+
+  // Параметры пагинации
   const page = 1;
   const limit = 5;
   
+  console.log("Контекст пользователя (ID):", user);
+    
+  // Если данные пользователя ещё не загружены — показываем индикатор загрузки для пользователя.
+  if (!user) {
+    return (
+      <Container className="text-center py-5">
+        <Spinner animation="border" role="status" />
+        <div>Загрузка пользователя...</div>
+      </Container>
+    );
+  }
+  console.log("Контекст пользователя (ID):", user._id);
+  // Если пользователь определён, проверяем наличие _id.
+  // Обратите внимание, что в вашем UserStore идентификатор хранится в _id, а не в id.
+  if (!user._id) {
+    return (
+      <Container className="py-5">
+        <Alert variant="danger">Пользователь не авторизован.</Alert>
+      </Container>
+    );
+  }
+
   useEffect(() => {
-    console.log("Контекст пользователя:", user); // Отладочный вывод
     const fetchData = async () => {
       try {
-        if (!user || !user.id) {
-          setError("Пользователь не авторизован.");
-          return;
-        }
-        // Используем id пользователя как sellerId
-        const { productsWithoutAuction, count } = await fetchProductsWithoutAuctionBySeller(user.id, page, limit);
+        // Используем _id пользователя как sellerId
+        const { productsWithoutAuction, count } = await fetchProductsWithoutAuctionBySeller(user._id, page, limit);
         setProducts(productsWithoutAuction);
         setCount(count);
       } catch (err) {
@@ -40,7 +57,7 @@ const UserProductsWithoutAuction = observer(() => {
     };
 
     fetchData();
-  }, [user]); // Обновляется при изменении пользователя
+  }, [user]); // Запускаем эффект при изменении объекта пользователя
 
   if (loading) {
     return (

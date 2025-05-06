@@ -1,5 +1,5 @@
 import { $authHost, $host } from "./index";
-import { jwtDecode } from "jwt-decode"; // Исправлено имя импорта jwtDecode
+import { jwtDecode } from "jwt-decode"; // Используем именованный экспорт
 
 // Регистрация нового пользователя
 export const registration = async (email, password, name, role = 'USER') => {
@@ -7,7 +7,7 @@ export const registration = async (email, password, name, role = 'USER') => {
         email,
         password,
         name, // Имя пользователя
-        role // Роль (например, ADMIN или USER)
+        role   // Роль (например, ADMIN или USER)
     });
     localStorage.setItem('token', data.token);
     return jwtDecode(data.token); // Декодируем токен для получения информации о пользователе
@@ -28,7 +28,7 @@ export const check = async () => {
         return jwtDecode(data.token); // Возвращаем данные из токена
     } catch (error) {
         console.error('Ошибка проверки токена:', error);
-        throw error; // Генерируем исключение в случае ошибки
+        throw error;
     }
 };
 
@@ -36,42 +36,66 @@ export const check = async () => {
 export const fetchUserProfile = async () => {
     try {
         const { data } = await $authHost.get('api/user/profile'); // Получение профиля пользователя
-        return data.user; // Возвращаем объект пользователя из ответа
+        return data.user;
     } catch (error) {
         console.error('Ошибка получения профиля пользователя:', error);
-        throw error; // Генерация исключения при ошибке
+        throw error;
     }
 };
 
-// Обновление данных пользователя
+// Обновление данных пользователя (новый маршрут updateUser)
 export const updateUserProfile = async (userData) => {
     try {
-        const { data } = await $authHost.put('api/user/profile', userData); // Обновляем данные пользователя
-        return data; // Возвращаем обновлённые данные пользователя
+        const { data } = await $authHost.put('api/user/updateUser', userData);
+        return data;
     } catch (error) {
         console.error('Ошибка обновления профиля пользователя:', error);
-        throw error; // Генерация исключения при ошибке
+        throw error;
     }
 };
 
 // Получение данных покупателя
 export const fetchBuyerInfo = async (userId) => {
     try {
-        const { data } = await $authHost.get(`api/user/buyer/${userId}`); // Получение информации о покупателе
-        return data; // Возвращаем информацию о покупателе
+        const { data } = await $authHost.get(`api/user/buyer/${userId}`);
+        return data;
     } catch (error) {
         console.error('Ошибка получения данных покупателя:', error);
-        throw error; // Генерируем исключение в случае ошибки
+        throw error;
     }
 };
 
 // Получение данных продавца
 export const fetchSellerInfo = async (userId) => {
     try {
-        const { data } = await $authHost.get(`api/user/seller/${userId}`); // Получение информации о продавце
-        return data; // Возвращаем информацию о продавце
+        const { data } = await $authHost.get(`api/user/seller/${userId}`);
+        return data;
     } catch (error) {
         console.error('Ошибка получения данных продавца:', error);
-        throw error; // Генерируем исключение в случае ошибки
+        throw error;
+    }
+};
+
+/* Функции для работы админ панели */
+
+// Получение списка всех пользователей (новый маршрут /all)
+export const fetchAllUsers = async () => {
+    try {
+        const { data } = await $authHost.get('api/user/all');
+        return data;
+    } catch (error) {
+        console.error('Ошибка получения всех пользователей:', error);
+        throw error;
+    }
+};
+
+// Удаление пользователя по ID (новый маршрут DELETE api/user/:id)
+export const deleteUser = async (userId) => {
+    try {
+        const { data } = await $authHost.delete(`api/user/${userId}`);
+        return data;
+    } catch (error) {
+        console.error('Ошибка удаления пользователя:', error);
+        throw error;
     }
 };
