@@ -27,6 +27,9 @@ class ProductController {
                 sellerId,
                 typeId,
                 img: fileName,
+                // Для корректной работы getMaxPrice предполагается наличие поля price!
+                // Если его нет, необходимо его добавить в модель и в запросе.
+                price: req.body.price || 0
             });
 
             // Обработка дополнительной информации (info)
@@ -135,6 +138,18 @@ class ProductController {
         } catch (error) {
             console.error('Ошибка при получении продукта:', error.message);
             next(ApiError.internal('Ошибка при получении продукта.'));
+        }
+    }
+
+    // Новый метод для получения максимальной цены среди продуктов
+    async getMaxPrice(req, res, next) {
+        try {
+            // Предполагаем, что в модели Product есть столбец "price"
+            const maxPrice = await Product.max('price');
+            return res.status(200).json({ maxPrice });
+        } catch (error) {
+            console.error("Ошибка при получении максимальной цены:", error.message);
+            return next(ApiError.internal('Ошибка при получении максимальной цены.'));
         }
     }
 }

@@ -5,15 +5,15 @@ class BidController {
     // Создание новой ставки
     async create(req, res, next) {
         try {
-            const { userId, auctionId, bid_amount } = req.body;
+            const { userId, auctionId, bidAmount } = req.body;
 
             // Проверка обязательных полей
-            if (!userId || !auctionId || !bid_amount) {
+            if (!userId || !auctionId || !bidAmount) {
                 return next(ApiError.badRequest('Все обязательные поля должны быть заполнены.'));
             }
 
             // Проверка суммы ставки (должна быть больше 0)
-            if (bid_amount <= 0) {
+            if (bidAmount <= 0) {
                 return next(ApiError.badRequest('Сумма ставки должна быть больше 0.'));
             }
 
@@ -24,7 +24,7 @@ class BidController {
             }
 
             // Создание новой ставки
-            const bid = await Bid.create({ userId, auctionId, bid_amount });
+            const bid = await Bid.create({ userId, auctionId, bidAmount });
 
             return res.status(201).json({
                 message: 'Ставка успешно создана.',
@@ -53,7 +53,7 @@ class BidController {
                 include: [
                     { model: User, attributes: ['id', 'name', 'email'] } // Включение данных о пользователе
                 ],
-                order: [['bid_amount', 'DESC']], // Сортировка ставок по убыванию суммы
+                order: [['bidAmount', 'DESC']], // Сортировка ставок по убыванию суммы
             });
 
             if (!bids.length) {

@@ -91,21 +91,51 @@ const Product = sequelize.define('product', {
     status: { type: DataTypes.STRING, allowNull: false, defaultValue: "AVAILABLE" },
     img: { type: DataTypes.STRING, allowNull: true }
 });
-
 // Таблица: Аукцион
 const Auction = sequelize.define('auction', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    id: { 
+        type: DataTypes.INTEGER, 
+        primaryKey: true, 
+        autoIncrement: true 
+    },
     productId: { 
         type: DataTypes.INTEGER,
         allowNull: false,
         references: { model: Product, key: 'id' }
     },
-    description: { type: DataTypes.STRING, allowNull: false },
-    startTime: { type: DataTypes.DATE, allowNull: false },
-    endTime: { type: DataTypes.DATE, allowNull: false },
-    status: { type: DataTypes.STRING, allowNull: false, defaultValue: "ACTIVE" },
-    startingPrice: { type: DataTypes.INTEGER, allowNull: false },
-    reservePrice: { type: DataTypes.INTEGER, allowNull: false }
+    description: { 
+        type: DataTypes.STRING, 
+        allowNull: false 
+    },
+    startTime: { 
+        type: DataTypes.DATE, 
+        allowNull: false 
+    },
+    endTime: { 
+        type: DataTypes.DATE, 
+        allowNull: false 
+    },
+    status: { 
+        type: DataTypes.STRING, 
+        allowNull: false, 
+        defaultValue: "ACTIVE" 
+    },
+    startingPrice: { 
+        type: DataTypes.INTEGER, 
+        allowNull: false 
+    },
+    reservePrice: { 
+        type: DataTypes.INTEGER, 
+        allowNull: false 
+    },
+    highestBidId: {              
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { 
+            model: 'bids',   
+            key: 'id'
+        }
+    }
 });
 
 // Таблица: Ставка
@@ -151,6 +181,9 @@ const ProductInfo = sequelize.define('product_info', {
     main_info: { type: DataTypes.STRING, allowNull: false, validate: { len: [1, 255] } },
     secondary_info: { type: DataTypes.TEXT, allowNull: true }
 });
+
+// Если вы ещё не настроили ассоциацию, добавьте её после определения моделей
+Auction.belongsTo(Bid, { foreignKey: 'highestBidId', as: 'highestBid' });
 
 // Связи между таблицами
 User.belongsTo(Buyer, { foreignKey: 'buyerId', as: 'buyerProfile' });

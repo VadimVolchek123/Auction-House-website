@@ -44,6 +44,10 @@ export default class UserStore {
         return this._isAuth;
     }
 
+    get id() {
+        return this._id;
+    }
+    
     get user() {
         return this._user;
     }

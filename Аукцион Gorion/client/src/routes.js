@@ -1,4 +1,11 @@
 import Admin from "./pages/Admin";
+import Shop from "./pages/Shop";
+import Auth from "./pages/Auth";
+import Profile from "./pages/ProfilePage";
+import AuctionPage from './pages/AuctionPage';
+import ProductPage from "./pages/ProductPage";
+import SellerProducts from "./pages/SellerProductsPage";
+import CreateProducts from "./pages/CreateProductPage";
 import { 
     ADMIN_ROUTE, 
     PRODUCT_ROUTE, 
@@ -10,13 +17,6 @@ import {
     SELLER_PRODUCTS_ROUTE,
     CREATEPRODUCT_ROUTE
 } from "./utils/const";
-import Shop from "./pages/Shop";
-import Auth from "./pages/Auth";
-import Profile from "./pages/ProfilePage";
-import AuctionPage from './pages/AuctionPage';
-import ProductPage from "./pages/ProductPage";
-import SellerProducts from "./pages/SellerProductsPage";
-import CreateProducts from "./pages/CreateProductPage";
 
 export const authRoutes = [
     {
@@ -55,7 +55,7 @@ export const publicRoutes = [
         Component: ProductPage
     },
     {
-        path: AUCTION_ROUTE + '/:id',
-        Component: AuctionPage // Теперь включена поддержка конкретного аукциона по ID
+        path: AUCTION_ROUTE + '/:auctionId',
+        Component: AuctionPage
     }
 ];
