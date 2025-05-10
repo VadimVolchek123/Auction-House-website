@@ -7,17 +7,24 @@ export const createAuction = async (auctionData) => {
   return data;
 };
 
-// Получение всех аукционов
+// Получение всех аукционов (возвращаются только активные)
 export const fetchAllAuctions = async (page = 1, limit = 10) => {
   const { data } = await $host.get('/api/auction', {
     params: { page, limit },
   });
-  return data; // Ожидается, что сервер вернёт { rows: [...], count: N }
+  // Ожидается, что сервер вернёт объект вида { rows: [...], count: N }
+  // Фильтруем аукционы: исключаем завершённые (например, status === 'FINISHED')
+  const activeAuctions = data.rows.filter(auction => auction.status !== 'FINISHED');
+  return { rows: activeAuctions, count: activeAuctions.length };
 };
 
 // Получение информации об определённом аукционе по его ID
 export const fetchAuctionById = async (auctionId) => {
   const { data } = await $host.get(`/api/auction/${auctionId}`);
+  // Если аукцион существует и его статус "FINISHED", возвращаем null (или можно выбросить ошибку)
+  if (data && data.status && data.status === 'FINISHED') {
+    return null; 
+  }
   return data;
 };
 
@@ -30,13 +37,12 @@ export const deleteAuction = async (auctionId) => {
 // Обновление максимальной (наивысшей) ставки для аукциона
 export const updateHighestBid = async (auctionId) => {
   const { data } = await $authHost.put(`/api/auction/${auctionId}/highestBid`);
-  console.log(data);
+  console.log("updateHighestBid:", data);
   return data;
 };
 
 // Размещение ставки
 export const placeBid = async (auctionId, bidValue, userId) => {
-  // Формируем объект для запроса.
   const payload = { auctionId, bidAmount: bidValue, userId };
   console.log("Payload перед отправкой:", payload);
   const { data } = await $authHost.post(`/api/bid`, payload);
@@ -45,7 +51,6 @@ export const placeBid = async (auctionId, bidValue, userId) => {
 
 // Получение всех ставок для конкретного аукциона
 export const fetchBidsForAuction = async (auctionId) => {
-  // Предполагается, что серверный эндпоинт для получения ставок выглядит так: /api/bid/auction/:auctionId
   const { data } = await $host.get(`/api/bid/auction/${auctionId}`);
   return data;
 };

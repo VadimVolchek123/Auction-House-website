@@ -7,6 +7,7 @@ const cors = require('cors');
 const router = require('./Routes/index')
 const errorHandler = require('./middleware/ErrorHandalingMiddleware')
 const path = require('path');
+require('./scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 5000; // Установка порта, на котором будет запущен сервер
