@@ -80,7 +80,7 @@ const UserProductsWithoutAuction = observer(() => {
     <Container>
       <Row className="my-3">
         <Col>
-          <h2>Мои товары без аукционов</h2>
+          <h2>Мои товары </h2>
           {products.length === 0 ? (
             <Alert variant="info">Нет товаров для отображения.</Alert>
           ) : (

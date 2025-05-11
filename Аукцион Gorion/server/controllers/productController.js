@@ -118,28 +118,29 @@ class ProductController {
         }
       }
       
-    async getOne(req, res, next) {
+      async getOne(req, res, next) {
         try {
-            const { id } = req.params;
-
-            const product = await Product.findOne({
-                where: { id },
-                include: [
-                    { model: ProductInfo, as: 'info' },
-                    { model: Seller, attributes: ['id', 'userId', 'rating'] },
-                ],
-            });
-
-            if (!product) {
-                return next(ApiError.badRequest('Продукт не найден.'));
-            }
-
-            return res.status(200).json(product);
+          const { id } = req.params;
+      
+          const product = await Product.findOne({
+            where: { id },
+            include: [
+              { model: ProductInfo, as: 'info' },
+              { model: Seller, attributes: ['id', 'userId'] } // removed 'rating'
+            ],
+          });
+      
+          if (!product) {
+            return next(ApiError.badRequest('Продукт не найден.'));
+          }
+      
+          return res.status(200).json(product);
         } catch (error) {
-            console.error('Ошибка при получении продукта:', error.message);
-            next(ApiError.internal('Ошибка при получении продукта.'));
+          console.error('Ошибка при получении продукта:', error.message);
+          next(ApiError.internal('Ошибка при получении продукта.'));
         }
-    }
+      }
+      
 
     // Новый метод для получения максимальной цены среди продуктов
     async getMaxPrice(req, res, next) {

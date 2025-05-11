@@ -18,6 +18,15 @@ const MergedNavbar = () => {
     navigate(SHOP_ROUTE); // Перенаправление на главную
   };
 
+  // Обработчик для плавного скролла к футеру (элемент с id="contacts")
+  const scrollToFooter = (e) => {
+    e.preventDefault(); // Отменяем стандартное поведение ссылки
+    const footerElement = document.getElementById('contacts');
+    if (footerElement) {
+      footerElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <Navbar expand="lg" fixed="top" className="fw-semibold">
       <Container fluid>
@@ -35,11 +44,8 @@ const MergedNavbar = () => {
             <Nav.Link onClick={() => navigate(SHOP_ROUTE)} className="text-light fw-semibold">
               Аукционы
             </Nav.Link>
-            <Nav.Link href="#contacts" className="text-light fw-semibold">
+            <Nav.Link href="#contacts" onClick={scrollToFooter} className="text-light fw-semibold">
               Информация
-            </Nav.Link>
-            <Nav.Link href="#contacts" className="text-light fw-semibold">
-              Контакты
             </Nav.Link>
           </Nav>
           {/* Правое меню */}

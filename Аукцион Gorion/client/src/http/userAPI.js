@@ -47,6 +47,7 @@ export const fetchUserProfile = async () => {
 export const updateUserProfile = async (userData) => {
     try {
         const { data } = await $authHost.put('api/user/updateUser', userData);
+        console.log (data)
         return data;
     } catch (error) {
         console.error('Ошибка обновления профиля пользователя:', error);
@@ -77,7 +78,13 @@ export const fetchSellerInfo = async (userId) => {
 };
 
 /* Функции для работы админ панели */
-
+// Функция для обновления роли пользователя (только для администраторов)
+export const updateUserRole = async (roleData) => {
+    // roleData должен быть объектом вида { userId, role }
+    const { data } = await $authHost.put('/api/user/role', roleData);
+    return data;
+  };
+  
 // Получение списка всех пользователей (новый маршрут /all)
 export const fetchAllUsers = async () => {
     try {

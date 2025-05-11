@@ -2,6 +2,8 @@ const ApiError = require('../Error/errorApi');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User, Buyer, Seller } = require('../model'); // Подключаем актуальные модели
+const uuid = require('uuid');
+const path = require('path');
 
 // Функция генерации JWT токена с расширенным payload
 const generateJwt = (id, email, role, name, buyerId, sellerId) => {
@@ -39,26 +41,32 @@ class UserController {
     try {
       const userId = req.user.id;
       const { email, password, name, avatar } = req.body;
-
-      if (!email && !password && !name && !avatar) {
-        return next(ApiError.badRequest('Не передано ни одно поле для изменения.'));
-      }
-
+  
       const user = await User.findOne({ where: { id: userId } });
       if (!user) {
         return next(ApiError.badRequest('Пользователь не найден.'));
       }
-
+  
       if (email) user.email = email;
       if (name) user.name = name;
-      if (avatar) user.avatar = avatar;
+  
+      // Если передан файл для аватара, сохраняем его в static
+      if (req.files && req.files.avatar) {
+        const fileName = uuid.v4() + ".jpg";
+        await req.files.avatar.mv(path.resolve(__dirname, '..', 'static', fileName));
+        user.avatar = fileName;
+      } else if (avatar) {
+        // Если файл не передан, но есть значение avatar в теле запроса, обновляем его
+        user.avatar = avatar;
+      }
+  
       if (password) {
         const hashPassword = await bcrypt.hash(password, 5);
         user.password = hashPassword;
       }
-
+  
       await user.save();
-
+  
       return res.status(200).json({ message: 'Профиль обновлён.', user });
     } catch (error) {
       console.error('Ошибка при обновлении пользователя:', error);
@@ -236,6 +244,36 @@ class UserController {
       next(ApiError.internal('Ошибка при удалении пользователя.'));
     }
   }
-}
 
+async updateUserRole(req, res, next) {
+  try {
+    // Проверяем, что текущий пользователь — администратор
+    if (req.user.role !== 'ADMIN') {
+      return next(ApiError.forbidden('Доступ запрещён. Только администратор может изменять роли.'));
+    }
+
+    // Извлекаем userId пользователя, чья роль будет обновлена, и новую роль из тела запроса
+    const { userId, role } = req.body;
+    if (!userId || !role) {
+      return next(ApiError.badRequest('Необходимо указать идентификатор пользователя и новую роль.'));
+    }
+
+    const userToUpdate = await User.findOne({ where: { id: userId } });
+    if (!userToUpdate) {
+      return next(ApiError.badRequest('Пользователь не найден.'));
+    }
+
+    userToUpdate.role = role;
+    await userToUpdate.save();
+
+    return res.status(200).json({
+      message: 'Роль обновлена',
+      user: userToUpdate
+    });
+  } catch (error) {
+    console.error('Ошибка при обновлении роли пользователя:', error);
+    next(ApiError.internal('Ошибка при обновлении роли пользователя.'));
+  }
+}
+}
 module.exports = new UserController();

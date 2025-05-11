@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Container, Tabs, Tab, Table, Button, Spinner, Alert } from "react-bootstrap";
+import { Container, Tabs, Tab, Table, Button, Spinner, Alert, Form } from "react-bootstrap";
 import { fetchAllAuctions, deleteAuction } from "../http/auctionAPI";
-import { fetchAllUsers, deleteUser } from "../http/userAPI";
+import { fetchAllUsers, deleteUser, updateUserRole } from "../http/userAPI";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState("auctions");
@@ -13,6 +13,8 @@ const AdminPanel = () => {
   // Состояния для пользователей
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  // Состояние для хранения изменяемых ролей по user.id
+  const [roleUpdates, setRoleUpdates] = useState({});
 
   // Общее состояние для ошибок
   const [error, setError] = useState("");
@@ -31,7 +33,7 @@ const AdminPanel = () => {
       // Указываем page = 1, limit = 100
       const result = await fetchAllAuctions(1, 100);
       console.log("Результат fetchAllAuctions:", result);
-      // Если API возвращает данные напрямую, используйте result, иначе result.rows
+      // Если API возвращает данные в result.rows, используем его, иначе result
       setAuctions(result.rows || result || []);
     } catch (err) {
       console.error("Ошибка получения аукционов:", err);
@@ -54,8 +56,15 @@ const AdminPanel = () => {
     try {
       const result = await fetchAllUsers();
       console.log("Результат fetchAllUsers:", result);
-      // Используйте result.users, если оно существует, или fallback к result.rows/result
-      setUsers(result.rows || result.users || []);
+      // Предполагаем, что API возвращает либо result.rows, либо result.users
+      const fetchedUsers = result.rows || result.users || [];
+      setUsers(fetchedUsers);
+      // Инициализируем локальное состояние для обновления ролей
+      const initialRoles = {};
+      fetchedUsers.forEach((user) => {
+        initialRoles[user.id] = user.role;
+      });
+      setRoleUpdates(initialRoles);
     } catch (err) {
       console.error("Ошибка получения пользователей:", err);
       setError("Ошибка загрузки пользователей.");
@@ -63,7 +72,6 @@ const AdminPanel = () => {
       setLoadingUsers(false);
     }
   };
-  
 
   const handleDeleteAuction = async (id) => {
     if (window.confirm("Вы уверены, что хотите удалить этот аукцион?")) {
@@ -89,11 +97,28 @@ const AdminPanel = () => {
     }
   };
 
+  // Обработчик изменения выбранной роли для пользователя
+  const handleRoleChange = (userId, newRole) => {
+    setRoleUpdates((prev) => ({ ...prev, [userId]: newRole }));
+  };
+
+  // Обновление роли пользователя (выполняется через API; сервер проверяет, что текущий пользователь – администратор)
+  const handleUpdateUserRole = async (userId) => {
+    const newRole = roleUpdates[userId];
+    try {
+      await updateUserRole({ userId, role: newRole });
+      loadUsers();
+    } catch (err) {
+      console.error("Ошибка обновления роли для пользователя:", err);
+      setError("Ошибка обновления роли.");
+    }
+  };
+
   return (
     <Container className="mt-5">
       <Tabs
         activeKey={activeTab}
-        onSelect={(k) => setActiveTab(k)}
+        onSelect={(key) => setActiveTab(key)}
         id="admin-panel-tabs"
         className="mb-3"
       >
@@ -116,21 +141,28 @@ const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {Array.isArray(auctions) && auctions.map((auction) => (
-                  <tr key={auction.id || auction.auctionId}>
-                    <td>{auction.id || auction.auctionId}</td>
-                    <td>{auction.productId}</td>
-                    <td>{auction.startingPrice || auction.starting_price}</td>
-                    <td>{auction.reservePrice || auction.reserve_price}</td>
-                    <td>{new Date(auction.startTime || auction.start_time).toLocaleString()}</td>
-                    <td>{new Date(auction.endTime || auction.end_time).toLocaleString()}</td>
-                    <td>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteAuction(auction.id || auction.auctionId)}>
-                        Удалить
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {Array.isArray(auctions) &&
+                  auctions.map((auction) => (
+                    <tr key={auction.id || auction.auctionId}>
+                      <td>{auction.id || auction.auctionId}</td>
+                      <td>{auction.productId}</td>
+                      <td>{auction.startingPrice || auction.starting_price}</td>
+                      <td>{auction.reservePrice || auction.reserve_price}</td>
+                      <td>{new Date(auction.startTime || auction.start_time).toLocaleString()}</td>
+                      <td>{new Date(auction.endTime || auction.end_time).toLocaleString()}</td>
+                      <td>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() =>
+                            handleDeleteAuction(auction.id || auction.auctionId)
+                          }
+                        >
+                          Удалить
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </Table>
           )}
@@ -153,19 +185,42 @@ const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {Array.isArray(users) && users.map((user) => (
-                  <tr key={user._id}>
-                    <td>{user._id}</td>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteUser(user._id)}>
-                        Удалить
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {Array.isArray(users) &&
+                  users.map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.id}</td>
+                      <td>{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>
+                        <Form.Select
+                          value={roleUpdates[user.id]}
+                          onChange={(e) =>
+                            handleRoleChange(user.id, e.target.value)
+                          }
+                          size="sm"
+                        >
+                          <option value="USER">USER</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </Form.Select>
+                      </td>
+                      <td>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleUpdateUserRole(user.id)}
+                        >
+                          Обновить роль
+                        </Button>{" "}
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
+                          Удалить
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </Table>
           )}
