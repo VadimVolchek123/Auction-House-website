@@ -152,7 +152,13 @@ const Cart = sequelize.define('cart', {
         references: { model: Auction, key: 'id' }
     },
     totalAmount: { type: DataTypes.FLOAT, allowNull: false }, // Общая сумма оплаты
+    paymentStatus: { 
+        type: DataTypes.ENUM("pending", "paid"), 
+        defaultValue: "pending", 
+        allowNull: false 
+    } // Статус оплаты: "pending" (ожидание) или "paid" (оплачено)
 });
+
 // Таблица: Ставка
 const Bid = sequelize.define('bid', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

@@ -1,4 +1,5 @@
-import { makeAutoObservable, autorun } from "mobx";
+import { makeAutoObservable, autorun, runInAction } from "mobx";
+import { fetchBuyerBalance } from "../http/userAPI"; 
 
 export default class UserStore {
     constructor() {
@@ -9,24 +10,42 @@ export default class UserStore {
         this._buyerId = null; // Информация о покупателе
         this._sellerId = null; // Информация о продавце
         this._role = "USER"; // Роль пользователя (по умолчанию USER)
+        this._balance = 0; // Баланс пользователя
         makeAutoObservable(this);
 
         // Автоматическая проверка изменений состояния аутентификации
         autorun(() => {
-            console.log("isAuth:", this._isAuth, "user:", this._user, "role:", this._role, "buyerId:", this._buyerId, "sellerId:", this._sellerId);
+            console.log(
+                "isAuth:", this._isAuth, 
+                "user:", this._user, 
+                "role:", this._role, 
+                "buyerId:", this._buyerId, 
+                "sellerId:", this._sellerId,
+                "balance:", this._balance
+            );
         });
     }
     // Сеттеры
     setUser(userProfile) {
-        console.log("setUser получен:", userProfile);
         this._user = userProfile;
         this._id = userProfile.id || null;
         this._role = userProfile.role || "USER";
         this._buyerId = userProfile.buyerId || null;
         this._sellerId = userProfile.sellerId || null;
-    }
+        
+        if (this._buyerId) {
+          fetchBuyerBalance(this._buyerId).then((balance) => {
+            runInAction(() => {
+              this._balance = balance;
+            });
+          }).catch((err) => {
+            console.error("Ошибка загрузки баланса:", err);
+          });
+        } else {
+          this._balance = 0;
+        }
+      }
     
-
     setIsAuth(bool) {
         this._isAuth = bool;
     }
@@ -37,6 +56,11 @@ export default class UserStore {
 
     setSellerId(userProfile) {
         this._sellerId = userProfile.sellerId; // Устанавливаем информацию о продавце
+    }
+    
+    // Сеттер для баланса
+    setBalance(newBalance) {
+        this._balance = newBalance;
     }
 
     // Геттеры
@@ -62,5 +86,9 @@ export default class UserStore {
 
     get sellerId() {
         return this._sellerId;
+    }
+
+    get balance() {
+        return this._balance;
     }
 }

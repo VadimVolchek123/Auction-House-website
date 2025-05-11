@@ -2,13 +2,13 @@ import { BrowserRouter } from 'react-router-dom';
 import './App.css';
 import React from 'react';
 import AppRouter from './components/AppRouter';
-import NavBar from './components/Navbar';
+import MergedNavBar from './components/Navbar';
 import Footer from './components/Footer';
 
 function App() {
   return (
     <BrowserRouter>
-      <NavBar />
+      <MergedNavBar />
       <AppRouter />
       <Footer />
     </BrowserRouter>

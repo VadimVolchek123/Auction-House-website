@@ -21,7 +21,7 @@ const UserProductsWithoutAuction = observer(() => {
   
   console.log("Контекст пользователя (ID):", user);
     
-  // Если данные пользователя ещё не загружены — показываем индикатор загрузки для пользователя.
+  // Если данные пользователя ещё не загружены — показываем индикатор загрузки
   if (!user) {
     return (
       <Container className="text-center py-5">
@@ -30,9 +30,8 @@ const UserProductsWithoutAuction = observer(() => {
       </Container>
     );
   }
-  console.log("Контекст пользователя (ID):", user._id);
-  // Если пользователь определён, проверяем наличие _id.
-  // Обратите внимание, что в вашем UserStore идентификатор хранится в _id, а не в id.
+  
+  // Проверяем наличие идентификатора пользователя
   if (!user._id) {
     return (
       <Container className="py-5">
@@ -57,7 +56,7 @@ const UserProductsWithoutAuction = observer(() => {
     };
 
     fetchData();
-  }, [user]); // Запускаем эффект при изменении объекта пользователя
+  }, [user]);
 
   if (loading) {
     return (
@@ -80,7 +79,7 @@ const UserProductsWithoutAuction = observer(() => {
     <Container>
       <Row className="my-3">
         <Col>
-          <h2>Мои товары </h2>
+          <h2>Мои товары</h2>
           {products.length === 0 ? (
             <Alert variant="info">Нет товаров для отображения.</Alert>
           ) : (

@@ -89,13 +89,16 @@ export const fetchProductsWithoutAuctionBySeller = async (sellerId, page = 1, li
     }
   }
   
-  const productsWithoutAuction = productData.rows.map((product) => ({
+  // Если отсутствуют товары, используем пустой массив вместо productData.rows
+  const productsWithoutAuction = (productData.rows || []).map((product) => ({
     ...product,
     seller: sellerData,
   }));
   
-  return { productsWithoutAuction, count: productData.count };
+  // Возвращаем также общее количество найденных товаров, если нужно
+  return { productsWithoutAuction, count: productData.count || 0 };
 };
+
 
 // Получение продуктов с аукционами конкретного продавца.
 // Если для продукта найден аукцион со статусом FINISHED, продукт не включается в список.

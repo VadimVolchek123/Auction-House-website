@@ -4,7 +4,7 @@ import { fetchUserProfile, updateUserProfile } from '../http/userAPI'; // Фун
 import UserProductsWithoutAuction from '../components/UserProductList';
 import { observer } from "mobx-react-lite";
 import './ProfilePage.css';
-
+import Cart from '../components/Cart';
 const ProfilePage = observer(() => {
   const [user, setUser] = useState(null);              // Данные профиля пользователя
   const [loading, setLoading] = useState(true);          // Состояние загрузки
@@ -182,6 +182,7 @@ const ProfilePage = observer(() => {
         </Col>
       </Row>
       <UserProductsWithoutAuction />
+      <Cart />
     </Container>
   );
 });

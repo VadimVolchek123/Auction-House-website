@@ -184,23 +184,33 @@ class UserController {
   // Получение данных покупателя
   async getBuyerInfo(req, res, next) {
     try {
-      const buyerId = req.user.buyerId;
-
+      console.log("req.user:", req.user); // Проверяем, что объект пользователя присутствует
+  
+      // Извлекаем buyerId из req.user
+      const buyerId = req.user ? req.user.buyerId : null;
+      console.log("buyerId получен:", buyerId);
+      
+      if (!buyerId) {
+        return next(ApiError.badRequest("ID покупателя отсутствует в запросе."));
+      }
+  
+      // Выполняем запрос к базе для получения общей информации о покупателе
       const buyer = await Buyer.findOne({
         where: { id: buyerId },
-        attributes: ['id', 'phone', 'bidHistory', 'balance']
+        attributes: ['id', 'phone', 'bidHistory']  // Здесь можно добавить любые нужные атрибуты
       });
-
+  
       if (!buyer) {
-        return next(ApiError.badRequest('Покупатель не найден.'));
+        console.log("Покупатель не найден в базе данных.");
+        return next(ApiError.badRequest("Покупатель не найден."));
       }
-
+  
       return res.status(200).json({ buyer });
     } catch (error) {
-      console.error('Ошибка при получении данных покупателя:', error);
-      next(ApiError.internal('Ошибка при получении данных покупателя.'));
+      console.error("Ошибка при получении данных покупателя:", error.message);
+      return next(ApiError.internal("Ошибка при получении данных покупателя."));
     }
-  }
+}
 
   // Пополнение баланса покупателя
   async topUpBalance(req, res, next) {
@@ -274,7 +284,75 @@ class UserController {
       next(ApiError.internal('Ошибка при удалении пользователя.'));
     }
   }
-
+  
+  async processPayment(req, res, next) {
+    try {
+      // Получаем ID товара и сумму
+      const { itemId, amount } = req.body;
+      if (!itemId || typeof amount === 'undefined') {
+        return next(ApiError.badRequest("Не указаны товар или сумма."));
+      }
+  
+      // Получаем ID покупателя через пользователя
+      const userId = req.user.id; // ID пользователя из токена
+      const user = await User.findOne({ where: { id: userId } });
+  
+      if (!user || !user.buyerId) {
+        return next(ApiError.badRequest("Связанный покупатель не найден."));
+      }
+  
+      const buyerId = user.buyerId;
+  
+      // Получаем баланс покупателя
+      const buyer = await Buyer.findOne({ where: { id: buyerId } });
+      if (!buyer) {
+        return next(ApiError.badRequest("Запись покупателя не найдена."));
+      }
+  
+      if (buyer.balance < amount) {
+        return next(ApiError.badRequest("Недостаточно средств."));
+      }
+  
+      // Вычитаем сумму из баланса
+      buyer.balance -= amount;
+      await buyer.save();
+  
+      return res.status(200).json({ message: `Оплата прошла успешно. Остаток: ${buyer.balance} руб.`, balance: buyer.balance });
+    } catch (error) {
+      console.error("Ошибка при обработке платежа:", error);
+      return next(ApiError.internal("Ошибка при оплате."));
+    }
+  }
+  
+    async getBuyerBalance (req, res, next) {
+      try {
+        console.log("req.user:", req.user); // Проверяем, что объект пользователя присутствует
+    
+        // Извлекаем buyerId из req.user
+        const buyerId = req.user ? req.user.buyerId : null;
+        console.log("buyerId получен:", buyerId);
+        
+        if (!buyerId) {
+          return next(ApiError.badRequest("ID покупателя отсутствует в запросе."));
+        }
+    
+        // Выполняем запрос к базе для получения только баланса покупателя
+        const buyer = await Buyer.findOne({
+          where: { id: buyerId },
+          attributes: ['balance']
+        });
+    
+        if (!buyer) {
+          console.log("Покупатель не найден в базе данных.");
+          return next(ApiError.badRequest("Покупатель не найден."));
+        }
+    
+        return res.status(200).json({ balance: buyer.balance });
+      } catch (error) {
+        console.error("Ошибка при получении баланса покупателя:", error.message);
+        return next(ApiError.internal("Ошибка при получении баланса покупателя."));
+      }
+    };
 async updateUserRole(req, res, next) {
   try {
     // Проверяем, что текущий пользователь — администратор

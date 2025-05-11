@@ -74,49 +74,46 @@ class ProductController {
     }
       
     async getAllBySeller(req, res, next) {
-        try {
-          // Приводим sellerId к числу и проверяем корректность
-          const sellerId = parseInt(req.params.sellerId, 10);
-          if (isNaN(sellerId)) {
-            return next(ApiError.badRequest('ID продавца указан некорректно.'));
-          }
-      
-          // Извлекаем параметры пагинации и приводим их к числовому значению
-          let { page, limit } = req.query;
-          page = parseInt(page, 10) || 1;
-          limit = parseInt(limit, 10) || 9;
-          const offset = (page - 1) * limit;
-      
-          console.log(`Запрос продуктов для sellerId: ${sellerId}, page: ${page}, limit: ${limit}`);
-      
-          // Выполняем запрос с пагинацией, включая связанные модели
-          const products = await Product.findAndCountAll({
-            where: { sellerId },
-            limit,
-            offset,
-            include: [
-              { model: ProductInfo, as: 'info' },
-              // Удаляем "rating" из запрашиваемых атрибутов, т.к. его нет в таблице seller
-              { model: Seller, attributes: ['id', 'userId'] },
-            ],
-          });
-      
-          console.log(`Найдено продуктов: ${products.count}`);
-      
-          if (!products.rows.length) {
-            return res.status(404).json({ message: 'Продукты для данного продавца не найдены.' });
-          }
-      
-          return res.status(200).json({
-            rows: products.rows,
-            count: products.count,
-          });
-        } catch (error) {
-          console.error('Ошибка при получении продуктов продавца:', error.message);
-          console.error(error.stack);
-          return next(ApiError.internal('Ошибка при получении продуктов продавца.'));
+      try {
+        // Приводим sellerId к числу и проверяем корректность
+        const sellerId = parseInt(req.params.sellerId, 10);
+        if (isNaN(sellerId)) {
+          return next(ApiError.badRequest('ID продавца указан некорректно.'));
         }
+    
+        // Извлекаем параметры пагинации и приводим их к числовому значению
+        let { page, limit } = req.query;
+        page = parseInt(page, 10) || 1;
+        limit = parseInt(limit, 10) || 9;
+        const offset = (page - 1) * limit;
+    
+        console.log(`Запрос продуктов для sellerId: ${sellerId}, page: ${page}, limit: ${limit}`);
+    
+        // Выполняем запрос с пагинацией, включая связанные модели
+        const products = await Product.findAndCountAll({
+          where: { sellerId },
+          limit,
+          offset,
+          include: [
+            { model: ProductInfo, as: 'info' },
+            // Указываем необходимые атрибуты для продавца
+            { model: Seller, attributes: ['id', 'userId'] },
+          ],
+        });
+    
+        console.log(`Найдено продуктов: ${products.count}`);
+    
+        // Возвращаем всегда ответ с 200, даже если продуктов нет
+        return res.status(200).json({
+          rows: products.rows || [],
+          count: products.count || 0,
+        });
+      } catch (error) {
+        console.error('Ошибка при получении продуктов продавца:', error.message);
+        console.error(error.stack);
+        return next(ApiError.internal('Ошибка при получении продуктов продавца.'));
       }
+    }
       
       async getOne(req, res, next) {
         try {

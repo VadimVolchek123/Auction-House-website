@@ -47,7 +47,7 @@ export const fetchUserProfile = async () => {
 export const updateUserProfile = async (userData) => {
     try {
         const { data } = await $authHost.put('api/user/updateUser', userData);
-        console.log (data)
+        console.log(data);
         return data;
     } catch (error) {
         console.error('Ошибка обновления профиля пользователя:', error);
@@ -83,8 +83,8 @@ export const updateUserRole = async (roleData) => {
     // roleData должен быть объектом вида { userId, role }
     const { data } = await $authHost.put('/api/user/role', roleData);
     return data;
-  };
-  
+};
+
 // Получение списка всех пользователей (новый маршрут /all)
 export const fetchAllUsers = async () => {
     try {
@@ -106,3 +106,44 @@ export const deleteUser = async (userId) => {
         throw error;
     }
 };
+// Обновление баланса пользователя
+export const updateBalance = async (balance) => {
+    try {
+      const { data } = await $authHost.put('api/user/updateBalance', { balance });
+      // data ожидается в виде { balance: новоеЗначение }
+      return data;
+    } catch (error) {
+      console.error('Ошибка обновления баланса:', error);
+      throw error;
+    }
+  };  
+
+// Функция пополнения баланса пользователя
+export const topUpAccount = async (amount) => {
+    try {
+        const { data } = await $authHost.post('api/user/topup', { amount });
+        return data;
+    } catch (error) {
+        console.error('Ошибка пополнения баланса:', error);
+        throw error;
+    }
+    
+};
+
+export const fetchBuyerBalance = async () => {
+    try {
+      const { data } = await $authHost.get(`api/user/buyer/balance`);
+      
+      // Проверяем, что ответ содержит поле balance
+      if (data && data.balance !== undefined) {
+        return data.balance;
+      } else {
+        throw new Error("Баланс покупателя отсутствует в ответе API");
+      }
+    } catch (error) {
+      console.error("Ошибка получения баланса покупателя:", error);
+      throw error;
+    }
+  };
+  
+  

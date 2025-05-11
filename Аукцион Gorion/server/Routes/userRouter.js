@@ -11,7 +11,9 @@ router.get('/profile', authMiddleware, userController.profile); // Получе�
 router.get('/all', authMiddleware, userController.getAllUsers);
 router.get('/removeUser', authMiddleware, userController.removeUser);
 router.put('/role', authMiddleware, userController.updateUserRole);
+router.post('/pay', authMiddleware, userController.processPayment);
 // Новый маршрут для получения покупателя или продавца
+router.get('/buyer/balance', authMiddleware, userController.getBuyerBalance);
 router.post('/topup', authMiddleware, userController.topUpBalance);
 router.get('/buyer/:id', userController.getBuyerInfo); // Информация о покупателе
 router.get('/seller/:id', userController.getSellerInfo); // Информация о продавце

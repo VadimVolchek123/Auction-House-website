@@ -1,21 +1,32 @@
-const { Cart, Buyer, Auction } = require('../model');
+const { Cart, Buyer, Auction, Product } = require('../model');
 const ApiError = require('../Error/errorApi');
 
 class CartController {
   
-  // Получение корзины пользователя
-  async getCart(req, res, next) {
-    try {
-      const buyerId = req.user.buyerId;
-
-      const cartItems = await Cart.findAll({ where: { buyerId } });
-      return res.status(200).json({ cart: cartItems });
-    } catch (error) {
-      console.error('Ошибка при получении корзины:', error);
-      next(ApiError.internal('Ошибка при получении корзины.'));
-    }
-  }
-
+    async getCart(req, res, next) {
+        try {
+          const buyerId = req.user.buyerId;
+      
+          const cartItems = await Cart.findAll({
+            where: { buyerId },
+            include: [
+              {
+                model: Auction,
+                include: [
+                  {
+                    model: Product
+                  }
+                ]
+              }
+            ]
+          });
+      
+          return res.status(200).json({ cart: cartItems });
+        } catch (error) {
+          console.error('Ошибка при получении корзины:', error);
+          next(ApiError.internal('Ошибка при получении корзины.'));
+        }
+      }
   // Добавление товара (аукциона) в корзину
   async addToCart(req, res, next) {
     try {
