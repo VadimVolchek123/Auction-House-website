@@ -184,15 +184,45 @@ class UserController {
   // Получение данных покупателя
   async getBuyerInfo(req, res, next) {
     try {
-      const userId = req.params.id;
-      const buyer = await Buyer.findOne({ where: { userId } });
+      const buyerId = req.user.buyerId;
+
+      const buyer = await Buyer.findOne({
+        where: { id: buyerId },
+        attributes: ['id', 'phone', 'bidHistory', 'balance']
+      });
+
       if (!buyer) {
         return next(ApiError.badRequest('Покупатель не найден.'));
       }
-      return res.status(200).json(buyer);
+
+      return res.status(200).json({ buyer });
     } catch (error) {
       console.error('Ошибка при получении данных покупателя:', error);
       next(ApiError.internal('Ошибка при получении данных покупателя.'));
+    }
+  }
+
+  // Пополнение баланса покупателя
+  async topUpBalance(req, res, next) {
+    try {
+      const buyerId = req.user.buyerId;
+      const { amount } = req.body;
+
+      const parsedAmount = parseFloat(amount);
+      if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+        return next(ApiError.badRequest('Некорректная сумма для пополнения.'));
+      }
+      const buyer = await Buyer.findOne({ where: { id: buyerId } });
+      if (!buyer) {
+        return next(ApiError.badRequest('Покупатель не найден.'));
+      }
+      // Обновляем баланс
+      buyer.balance += parsedAmount;
+      await buyer.save();
+      return res.status(200).json({ message: `Баланс пополнен на ${parsedAmount} руб.`, balance: buyer.balance });
+    } catch (error) {
+      console.error('Ошибка при пополнении баланса:', error);
+      next(ApiError.internal('Ошибка при пополнении баланса.'));
     }
   }
 

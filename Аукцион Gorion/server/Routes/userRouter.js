@@ -12,6 +12,7 @@ router.get('/all', authMiddleware, userController.getAllUsers);
 router.get('/removeUser', authMiddleware, userController.removeUser);
 router.put('/role', authMiddleware, userController.updateUserRole);
 // Новый маршрут для получения покупателя или продавца
+router.post('/topup', authMiddleware, userController.topUpBalance);
 router.get('/buyer/:id', userController.getBuyerInfo); // Информация о покупателе
 router.get('/seller/:id', userController.getSellerInfo); // Информация о продавце
 

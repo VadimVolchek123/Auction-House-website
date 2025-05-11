@@ -64,7 +64,8 @@ const Buyer = sequelize.define('buyer', {
         references: { model: User, key: 'id' } 
     },
     bidHistory: { type: DataTypes.TEXT, allowNull: true },
-    phone: { type: DataTypes.STRING, allowNull: true }
+    phone: { type: DataTypes.STRING, allowNull: true },
+    balance: { type: DataTypes.FLOAT, defaultValue: 0.0, allowNull: false }
 });
 
 // Таблица: Тип продукта
@@ -137,7 +138,21 @@ const Auction = sequelize.define('auction', {
         }
     }
 });
-
+// Таблица: Корзина
+const Cart = sequelize.define('cart', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    buyerId: { 
+        type: DataTypes.INTEGER, 
+        allowNull: false,
+        references: { model: Buyer, key: 'id' } 
+    },
+    auctionId: { 
+        type: DataTypes.INTEGER, 
+        allowNull: true, 
+        references: { model: Auction, key: 'id' }
+    },
+    totalAmount: { type: DataTypes.FLOAT, allowNull: false }, // Общая сумма оплаты
+});
 // Таблица: Ставка
 const Bid = sequelize.define('bid', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -184,46 +199,42 @@ const ProductInfo = sequelize.define('product_info', {
 
 // Если вы ещё не настроили ассоциацию, добавьте её после определения моделей
 Auction.belongsTo(Bid, { foreignKey: 'highestBidId', as: 'highestBid' });
-
 // Связи между таблицами
 User.belongsTo(Buyer, { foreignKey: 'buyerId', as: 'buyerProfile' });
 User.belongsTo(Seller, { foreignKey: 'sellerId', as: 'sellerProfile' });
 // User - Buyer
 User.hasOne(Buyer, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Buyer.belongsTo(User, { foreignKey: 'userId' });
-
 // User - Seller
 User.hasOne(Seller, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Seller.belongsTo(User, { foreignKey: 'userId' });
-
 // Seller - SellerReview
 Seller.hasMany(SellerReview, { foreignKey: 'sellerId', onDelete: 'CASCADE' });
 SellerReview.belongsTo(Seller, { foreignKey: 'sellerId' });
-
 // Seller - Product
 Seller.hasMany(Product, { foreignKey: 'sellerId', onDelete: 'CASCADE' });
 Product.belongsTo(Seller, { foreignKey: 'sellerId' });
-
 // Type - Product
 Type.hasMany(Product, { foreignKey: 'typeId', onDelete: 'CASCADE' });
 Product.belongsTo(Type, { foreignKey: 'typeId' });
-
 // Product - Auction
 Product.hasOne(Auction, { foreignKey: 'productId', onDelete: 'CASCADE' });
 Auction.belongsTo(Product, { foreignKey: 'productId' });
-
 // Auction - Bid
 Auction.hasMany(Bid, { foreignKey: 'auctionId', onDelete: 'CASCADE' });
 Bid.belongsTo(Auction, { foreignKey: 'auctionId' });
-
 // User - Bid
 User.hasMany(Bid, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Bid.belongsTo(User, { foreignKey: 'userId' });
-
 // Product - ProductInfo
 Product.hasMany(ProductInfo, { foreignKey: 'productId', as: 'info', onDelete: 'CASCADE' });
 ProductInfo.belongsTo(Product, { foreignKey: 'productId' });
-
+// Связь Buyer - Cart (Один покупатель может иметь несколько записей в корзине)
+Buyer.hasMany(Cart, { foreignKey: 'buyerId', onDelete: 'CASCADE' });
+Cart.belongsTo(Buyer, { foreignKey: 'buyerId' });
+// Связь Auction - Cart (Каждый аукцион может быть связан с корзиной)
+Auction.hasMany(Cart, { foreignKey: 'auctionId', onDelete: 'SET NULL' });
+Cart.belongsTo(Auction, { foreignKey: 'auctionId' });
 module.exports = {
     User,
     Buyer,
@@ -233,5 +244,6 @@ module.exports = {
     Type,
     ProductInfo,
     Auction,
-    Bid
+    Bid,
+    Cart
 };
