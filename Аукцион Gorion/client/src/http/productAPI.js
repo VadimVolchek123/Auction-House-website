@@ -9,12 +9,11 @@ export const createProduct = async (product) => {
 // Функция для получения всех продуктов с пагинацией, фильтром по поиску и отбором активных аукционов
 export const fetchAllProducts = async (page = 1, limit = 5, search = "", typeId = "") => {
   try {
-    // Запрашиваем продукты через новый эндпоинт /api/product с передачей page, limit, search и typeId
     const { data: productData } = await $host.get("/api/product", {
       params: { page, limit, search, typeId },
     });
 
-    // Проверяем, возвращает ли сервер товары в поле products или в поле rows
+    // Используем поле products или rows, если оно существует, иначе пустой массив
     const productsArray =
       productData.products && Array.isArray(productData.products)
         ? productData.products
@@ -41,13 +40,9 @@ export const fetchAllProducts = async (page = 1, limit = 5, search = "", typeId 
             }
           }
         }
-        return {
-          ...product,
-          seller: sellerData,
-        };
+        return { ...product, seller: sellerData };
       })
     );
-    // Если count отсутствует, берём длину массива
     const count = productData.count || productsWithSeller.length;
     return { products: productsWithSeller, count };
   } catch (error) {
@@ -61,7 +56,7 @@ export const fetchProductsWithoutAuctionBySeller = async (sellerId, page = 1, li
   const { data: productData } = await $host.get(`/api/product/seller/${sellerId}`, {
     params: { page, limit },
   });
-  
+
   let sellerData = null;
   try {
     const response = await $host.get(`/api/user/seller/${sellerId}`);
@@ -74,17 +69,32 @@ export const fetchProductsWithoutAuctionBySeller = async (sellerId, page = 1, li
       console.error(`Ошибка при получении данных продавца для sellerId ${sellerId}:`, error);
     }
   }
-  
-  // Если отсутствуют товары, используем пустой массив вместо productData.rows
-  const productsWithoutAuction = (productData.rows || []).map((product) => ({
+
+  const productsArray =
+    productData.products && Array.isArray(productData.products)
+      ? productData.products
+      : productData.rows && Array.isArray(productData.rows)
+        ? productData.rows
+        : [];
+
+  const productsWithoutAuction = productsArray.map((product) => ({
     ...product,
     seller: sellerData,
   }));
-  
-  // Возвращаем также общее количество найденных товаров, если нужно
+
   return { productsWithoutAuction, count: productData.count || 0 };
 };
 
+// Функция для удаления продукта с передачей заголовка авторизации
+export const deleteProduct = async (productId, token) => {
+  // Убедитесь, что переданный token действителен
+  const { data } = await $host.delete(`/api/product/delete/${productId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return data;
+};
 
 // Получение продуктов с аукционами конкретного продавца.
 // Если для продукта найден аукцион со статусом FINISHED, продукт не включается в список.
@@ -93,10 +103,10 @@ export const fetchProductsWithAuctionBySeller = async (sellerId, page = 1, limit
     params: { page, limit },
   });
   const { data: auctionData } = await $host.get('/api/auction');
-  
+
   let sellerData = null;
   try {
-    const response = await $host.get(`/api/seller/${sellerId}`);
+    const response = await $host.get(`/api/user/seller/${sellerId}`);
     sellerData = response.data;
   } catch (error) {
     if (error.response && error.response.status === 404) {
@@ -106,24 +116,25 @@ export const fetchProductsWithAuctionBySeller = async (sellerId, page = 1, limit
       console.error(`Ошибка при получении данных продавца для sellerId ${sellerId}:`, error);
     }
   }
-  
+
+  const productsArray =
+    productData.products && Array.isArray(productData.products)
+      ? productData.products
+      : productData.rows && Array.isArray(productData.rows)
+        ? productData.rows
+        : [];
+
   const productsFiltered = await Promise.all(
-    productData.rows.map(async (product) => {
-      let auction =
-        auctionData.find((auc) => Number(auc.productId) === Number(product.id)) || null;
-      
+    productsArray.map(async (product) => {
+      let auction = auctionData.find((auc) => Number(auc.productId) === Number(product.id)) || null;
       // Если аукцион найден и его статус FINISHED, исключаем продукт
       if (auction && auction.status === "FINISHED") {
         return null;
       }
-      return {
-        ...product,
-        auction,
-        seller: sellerData,
-      };
+      return { ...product, auction, seller: sellerData };
     })
   );
-  
+
   const productsWithAuction = productsFiltered.filter((item) => item !== null);
   return { productsWithAuction, count: productsWithAuction.length };
 };
@@ -136,10 +147,10 @@ export const fetchOneProduct = async (id) => {
   const { data: auctionData } = await $host.get('/api/auction', {
     params: { productId: id },
   });
-  
+
   let sellerData = null;
   try {
-    const response = await $host.get(`/api/seller/${productData.sellerId}`);
+    const response = await $host.get(`/api/user/seller/${productData.sellerId}`);
     sellerData = response.data;
   } catch (error) {
     if (error.response && error.response.status === 404) {
@@ -149,19 +160,13 @@ export const fetchOneProduct = async (id) => {
       console.error(`Ошибка при получении данных продавца для sellerId ${productData.sellerId}:`, error);
     }
   }
-  
+
   let auction = auctionData || null;
   if (auction && auction.status === "FINISHED") {
-    // Здесь можно вернуть null, чтобы не показывать аукцион на странице деталей,
-    // или оставить информацию об окончании – на ваше усмотрение.
     auction = null;
   }
-  
-  return {
-    ...productData,
-    auction,
-    seller: sellerData,
-  };
+
+  return { ...productData, auction, seller: sellerData };
 };
 
 // Работа с типами

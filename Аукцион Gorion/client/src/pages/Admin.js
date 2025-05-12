@@ -1,7 +1,6 @@
 import React from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
-import CreateType from '../components/CreateType'; // Компонент создания типа
-import TypeList from '../components/AllType'; // Компонент просмотра всех типов
+import TypeManagement from '../components/TypeManagement'; // Новый интегрированный менеджер типов
 import AdminPanel from '../components/AdminPanel'; // Панель для работы с аукционами и пользователями
 
 const AdminPage = () => {
@@ -14,21 +13,12 @@ const AdminPage = () => {
         </Col>
       </Row>
 
-      {/* Блок управления типами продуктов */}
+      {/* Блок управления типами продуктов (создание и список) */}
       <Row>
-        <Col md={6}>
+        <Col md={12}>
           <Card className="mb-4 shadow-sm">
             <Card.Body>
-              <h3 className="mb-3">Создание нового типа продукта</h3>
-              <CreateType />
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card className="mb-4 shadow-sm">
-            <Card.Body>
-              <h3 className="mb-3">Список типов продуктов</h3>
-              <TypeList />
+              <TypeManagement />
             </Card.Body>
           </Card>
         </Col>

@@ -1,8 +1,9 @@
+// CreateType.jsx
 import React, { useState } from 'react';
 import { createType } from '../http/productAPI';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
 
-const CreateType = () => {
+const CreateType = ({ onTypeCreated }) => {
   const [typeName, setTypeName] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -13,7 +14,10 @@ const CreateType = () => {
       const newType = await createType({ name: typeName });
       setSuccessMessage(`Тип "${newType.name}" успешно создан!`);
       setErrorMessage('');
-      setTypeName(''); // Сбросить поле ввода
+      setTypeName(''); // сброс поля ввода
+      if (onTypeCreated) {
+        onTypeCreated(); // сигнал о создании нового типа для обновления таблицы
+      }
     } catch (error) {
       setErrorMessage('Ошибка при создании типа.');
       setSuccessMessage('');

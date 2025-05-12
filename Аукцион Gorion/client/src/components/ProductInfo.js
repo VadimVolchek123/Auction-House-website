@@ -1,6 +1,7 @@
 import React from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import { deleteProduct } from "../http/productAPI";
 
 const ProductInfo = ({ product }) => {
   const navigate = useNavigate();
@@ -9,27 +10,19 @@ const ProductInfo = ({ product }) => {
     return <div>Продукт не найден.</div>;
   }
 
-  // Деструктуризация полей продукта, включая id, который потребуется для удаления
   const { id, name, description, img, price, additionalInfo } = product;
-  
-  // Базовый URL для загрузки картинок (если используется)
   const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const productImage = img ? `${baseUrl}/${img}` : "placeholder.jpg";
 
-  // Функция для удаления товара
+  // Получите токен (например, из localStorage или контекста)
+  const token = localStorage.getItem("token");
+
   const handleDelete = async () => {
     if (window.confirm("Вы уверены, что хотите удалить этот товар?")) {
       try {
-        const response = await fetch(`${baseUrl}/api/products/${id}`, {
-          method: "DELETE",
-        });
-        if (response.ok) {
-          alert("Продукт успешно удален.");
-          // После удаления можно перейти к списку товаров или на главную страницу
-          navigate("/products");
-        } else {
-          alert("Ошибка удаления продукта.");
-        }
+        await deleteProduct(id, token);
+        alert("Продукт успешно удален.");
+        navigate("/products");
       } catch (error) {
         console.error("Ошибка при удалении товара:", error);
         alert("Ошибка удаления продукта.");
@@ -60,7 +53,6 @@ const ProductInfo = ({ product }) => {
               </ul>
             </div>
           )}
-          {/* Кнопка удаления */}
           <Button variant="danger" onClick={handleDelete} className="mt-3">
             Удалить товар
           </Button>
