@@ -1,7 +1,8 @@
 const uuid = require('uuid');
 const path = require('path');
-const { Product, ProductInfo, Seller } = require('../model');
+const { Product, ProductInfo, Seller, Auction } = require('../model');
 const ApiError = require('../Error/errorApi');
+const { Op } = require('sequelize');
 
 class ProductController {
 
@@ -51,28 +52,54 @@ class ProductController {
         }
     }
 
-    async getAll(req, res) {
-        try {
-            let { sellerId, typeId, limit, page } = req.query;
-            page = parseInt(page, 10) || 1;
-            limit = parseInt(limit, 10) || 9;
-            const offset = (page - 1) * limit;
-
-            const queryOptions = { limit, offset };
-
-            // Добавляем фильтры
-            if (sellerId) queryOptions.where = { sellerId };
-            if (typeId) queryOptions.where = { ...queryOptions.where, typeId };
-
-            const products = await Product.findAndCountAll(queryOptions);
-
-            return res.status(200).json(products);
-        } catch (error) {
-            console.error('Ошибка при получении всех продуктов:', error.message);
-            return res.status(500).json({ message: 'Ошибка при получении всех продуктов.' });
+    async getAll(req, res, next) {
+      try {
+        // Извлекаем параметры запроса
+        let { sellerId, typeId, limit, page, search } = req.query;
+    
+        page = parseInt(page, 10) || 1;
+        limit = parseInt(limit, 10) || 9;
+        const offset = (page - 1) * limit;
+    
+        // Формируем базовые параметры запроса для пагинации
+        const queryOptions = { limit, offset, where: {} };
+    
+        // Фильтр по sellerId
+        if (sellerId) {
+          queryOptions.where.sellerId = sellerId;
         }
+    
+        // Фильтр по typeId
+        if (typeId) {
+          queryOptions.where.typeId = typeId;
+        }
+    
+        // Фильтр по имени товара (поисковый запрос)
+        if (search) {
+          queryOptions.where.name = { [Op.like]: `%${search}%` };
+        }
+    
+        // Включаем связанные аукционы — только активные (где endTime больше текущего времени)
+        const now = new Date();
+        queryOptions.include = [
+          {
+            model: Auction,
+            required: true, // возвращаем только товары, у которых есть связанный аукцион
+            where: {
+              endTime: { [Op.gt]: now }
+            }
+          }
+        ];
+    
+        const products = await Product.findAndCountAll(queryOptions);
+    
+        return res.status(200).json(products);
+      } catch (error) {
+        console.error("Ошибка при получении всех продуктов:", error.message);
+        return res.status(500).json({ message: "Ошибка при получении всех продуктов." });
+      }
     }
-      
+ 
     async getAllBySeller(req, res, next) {
       try {
         // Приводим sellerId к числу и проверяем корректность
@@ -150,6 +177,34 @@ class ProductController {
             return next(ApiError.internal('Ошибка при получении максимальной цены.'));
         }
     }
+    // Если для продукта найдены связанные аукционы, они удаляются перед удалением продукта.
+    async deleteProduct(req, res, next) {
+      try {
+          const { id } = req.params;
+          
+          // Найти продукт по id
+          const product = await Product.findOne({ where: { id } });
+          if (!product) {
+              return next(ApiError.badRequest('Продукт не найден.'));
+          }
+          
+          // Проверить наличие связанных аукционов по productId
+          const associatedAuctions = await Auction.findAll({ where: { productId: id } });
+          
+          // Если найдены связанные аукционы, удалить их
+          if (associatedAuctions && associatedAuctions.length > 0) {
+              await Auction.destroy({ where: { productId: id } });
+          }
+          
+          // Удалить продукт
+          await product.destroy();
+          
+          return res.status(200).json({ message: 'Продукт и связанные аукционы успешно удалены.' });
+      } catch (error) {
+          console.error('Ошибка при удалении продукта:', error.message);
+          next(ApiError.internal('Ошибка при удалении продукта.'));
+      }
+  }
 }
 
 module.exports = new ProductController();

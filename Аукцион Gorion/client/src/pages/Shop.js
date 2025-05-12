@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Container, Row, Col } from "react-bootstrap";
+import { Container, Row, Col, Form, InputGroup, Button } from "react-bootstrap";
 import ProductL from "../components/ProductL";
 import Carousel from "../components/Carousels";
 import Pages from "../components/Pages";
+import TypeFilter from "../components/TypeFilter";
 import { observer } from "mobx-react-lite";
 import { Context } from "../index";
 import { fetchTypes, fetchAllProducts } from "../http/productAPI";
@@ -10,64 +11,57 @@ import { fetchTypes, fetchAllProducts } from "../http/productAPI";
 const Shop = observer(() => {
   const { product } = useContext(Context);
   const [loading, setLoading] = useState(false);
-  // Если API возвращает сообщение (например, "Аукционы не найдены.")
+  // Сообщение об ошибке от API (например, "Аукционы не найдены.")
   const [errorMsg, setErrorMsg] = useState("");
+  
+  // Локальное состояние для строки поиска
+  // searchInput – текущее значение в поле ввода
+  // searchTerm – значение, по которому будет происходить поиск (обновляется при нажатии кнопки/Enter)
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   if (!product) {
     console.error("Контекст product не определён.");
     return <div>Ошибка загрузки данных.</div>;
   }
 
-  // Начальная загрузка типов и первой страницы продуктов
+  // Начальная загрузка типов продуктов (один раз при монтировании)
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setErrorMsg("");
+    const loadTypes = async () => {
       try {
-        // Загружаем типы продуктов
         const types = await fetchTypes();
         if (types) {
           product.setTypes(types);
         } else {
           console.warn("Типы не были загружены");
         }
-
-        // Загружаем все продукты (первая страница)
-        // Предполагается, что API возвращает объект { products, count } или объект с полем message при отсутствии данных
-        const { products, count, message } = await fetchAllProducts(1, product.limit);
-        if (message) {
-          // Если API вернуло сообщение, сохраняем его в состоянии errorMsg
-          setErrorMsg(message);
-          product.setProducts([]);
-          product.setTotalCount(0);
-        } else {
-          product.setProducts(products);
-          product.setTotalCount(count);
-        }
       } catch (error) {
-        console.error("Ошибка загрузки данных:", error);
-        setErrorMsg("Ошибка загрузки данных.");
-      } finally {
-        setLoading(false);
+        console.error("Ошибка загрузки типов:", error);
       }
     };
+    loadTypes();
+  }, [product]);
 
-    loadData();
-  }, [product.limit]);
-
-  // Загрузка продуктов при изменении номера страницы или лимита
+  // Загрузка продуктов при изменении страницы, лимита, поискового запроса или выбранного типа
   useEffect(() => {
     const loadFilteredProducts = async () => {
       setLoading(true);
       setErrorMsg("");
       try {
-        const { products, count, message } = await fetchAllProducts(product.page, product.limit);
+        // Если выбран тип, передаем его id, иначе пустую строку (или null)
+        const typeId = product.selectedType ? product.selectedType.id : "";
+        const { products: prods, count, message } = await fetchAllProducts(
+          product.page,
+          product.limit,
+          searchTerm,
+          typeId
+        );
         if (message) {
           setErrorMsg(message);
           product.setProducts([]);
           product.setTotalCount(0);
         } else {
-          product.setProducts(products);
+          product.setProducts(prods);
           product.setTotalCount(count);
         }
       } catch (error) {
@@ -79,11 +73,47 @@ const Shop = observer(() => {
     };
 
     loadFilteredProducts();
-  }, [product.page, product.limit]);
+  }, [product.page, product.limit, searchTerm, product.selectedType, product]);
+
+  // Функция для запуска поиска, вызывается кнопкой или при нажатии Enter
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+  };
 
   return (
     <Container>
       <Carousel />
+      
+      {/* Поле поиска */}
+      <Row className="mt-3">
+        <Col md={12}>
+          <InputGroup>
+            <Form.Control
+              type="text"
+              placeholder="Поиск по имени товара..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              // Если нажимаем Enter, запускаем поиск
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch();
+                }
+              }}
+            />
+            <Button variant="primary" onClick={handleSearch}>
+              Найти
+            </Button>
+          </InputGroup>
+        </Col>
+      </Row>
+      
+      {/* Фильтр по типам */}
+      <Row className="mt-3">
+        <Col md={12}>
+          <TypeFilter />
+        </Col>
+      </Row>
+      
       <Row className="mt-3">
         <Col md={12}>
           <h2 className="text-center">Магазин продуктов</h2>
@@ -98,7 +128,7 @@ const Shop = observer(() => {
         </Row>
       )}
 
-      {/* Если не загружается, но есть сообщение от API */}
+      {/* Вывод ошибки, если она есть */}
       {!loading && errorMsg && (
         <Row className="mt-3">
           <Col md={12} className="text-center">
@@ -107,7 +137,7 @@ const Shop = observer(() => {
         </Row>
       )}
 
-      {/* Если не загружается и нет сообщения — выводим товары */}
+      {/* Если нет ошибок и загрузка завершена — выводим товары */}
       {!loading && !errorMsg && (
         <Row className="mt-3">
           <Col md={12}>

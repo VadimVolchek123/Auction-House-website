@@ -6,68 +6,54 @@ export const createProduct = async (product) => {
   return data;
 };
 
-// Получение всех продуктов с прикреплением аукционных и продавцовых данных.
-// Продукты, для которых аукцион найден, но завершён, исключаются из результата.
-export const fetchAllProducts = async (page = 1, limit = 5) => {
-  // Запрашиваем продукты (ожидается, что endpoint возвращает объект вида { rows, count })
-  const { data: productData } = await $host.get('/api/product', {
-    params: { page, limit },
-  });
-
-  // Запрашиваем все аукционы сразу, чтобы не делать отдельный запрос для каждого продукта
-  let auctionData = [];
+// Функция для получения всех продуктов с пагинацией, фильтром по поиску и отбором активных аукционов
+export const fetchAllProducts = async (page = 1, limit = 5, search = "", typeId = "") => {
   try {
-    const response = await $host.get('/api/auction');
-    if (Array.isArray(response.data)) {
-      auctionData = response.data;
-    } else if (response.data.auctions && Array.isArray(response.data.auctions)) {
-      auctionData = response.data.auctions;
-    }
-  } catch (error) {
-    console.error('Ошибка при запросе аукционов:', error.response || error);
-    auctionData = [];
-  }
+    // Запрашиваем продукты через новый эндпоинт /api/product с передачей page, limit, search и typeId
+    const { data: productData } = await $host.get("/api/product", {
+      params: { page, limit, search, typeId },
+    });
 
-  // Для каждого продукта прикрепляем данные аукциона (если есть) и данные продавца,
-  // но если найденный аукцион завершён, продукт исключается из списка.
-  const productsFiltered = await Promise.all(
-    productData.rows.map(async (product) => {
-      // Ищем аукцион, где product.id совпадает с auction.productId
-      const auction = auctionData.find(
-        (auc) => Number(auc.productId) === Number(product.id)
-      ) || null;
-      
-      // Если аукцион существует и его статус FINISHED, возвращаем null для фильтрации
-      if (auction && auction.status === "FINISHED") {
-        return null;
-      }
+    // Проверяем, возвращает ли сервер товары в поле products или в поле rows
+    const productsArray =
+      productData.products && Array.isArray(productData.products)
+        ? productData.products
+        : productData.rows && Array.isArray(productData.rows)
+          ? productData.rows
+          : [];
 
-      // Получаем данные продавца для данного продукта.
-      let sellerData = null;
-      if (product.sellerId) {
-        try {
-          const response = await $host.get(`/api/user/seller/${product.sellerId}`);
-          sellerData = response.data;
-        } catch (error) {
-          if (error.response && error.response.status === 404) {
-            console.warn(`Продавец с sellerId ${product.sellerId} не найден.`);
-            sellerData = null;
-          } else {
-            console.error(`Ошибка при получении данных продавца для sellerId ${product.sellerId}:`, error);
+    // Для каждого продукта загружаем данные продавца (если sellerId указан)
+    const productsWithSeller = await Promise.all(
+      productsArray.map(async (product) => {
+        let sellerData = null;
+        if (product.sellerId) {
+          try {
+            const response = await $host.get(`/api/user/seller/${product.sellerId}`);
+            sellerData = response.data;
+          } catch (error) {
+            if (error.response && error.response.status === 404) {
+              console.warn(`Продавец с sellerId ${product.sellerId} не найден.`);
+            } else {
+              console.error(
+                `Ошибка при получении данных продавца для sellerId ${product.sellerId}:`,
+                error
+              );
+            }
           }
         }
-      }
-      return {
-        ...product,
-        auction,
-        seller: sellerData,
-      };
-    })
-  );
-  
-  // Фильтруем нулевые значения (продукты с завершёнными аукционами)
-  const products = productsFiltered.filter((item) => item !== null);
-  return { products, count: products.length };
+        return {
+          ...product,
+          seller: sellerData,
+        };
+      })
+    );
+    // Если count отсутствует, берём длину массива
+    const count = productData.count || productsWithSeller.length;
+    return { products: productsWithSeller, count };
+  } catch (error) {
+    console.error("Ошибка в fetchAllProducts:", error);
+    throw error;
+  }
 };
 
 // Получение продуктов без аукционов конкретного продавца (без фильтрации)

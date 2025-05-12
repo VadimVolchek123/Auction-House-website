@@ -8,7 +8,7 @@ export default class ProductStore {
     this._selectedType = {};   // Выбранный тип продукта
     this._page = 1;            // Текущая страница
     this._totalCount = 0;      // Общее количество продуктов
-    this._limit = 3;           // Лимит продуктов на страницу
+    this._limit = 4;           // Лимит продуктов на страницу
     makeAutoObservable(this);
   }
 

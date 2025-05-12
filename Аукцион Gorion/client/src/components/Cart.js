@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Container, Row, Col, Card, Spinner, Alert, Button } from "react-bootstrap";
-import { fetchCartItems } from "../http/cartAPI";
+import { fetchCartItems, payForCart } from "../http/cartAPI";
 import { Context } from "../index";
 import { runInAction } from "mobx";
-import { $authHost } from "../http/index";
 
 const Cart = () => {
   const { user } = useContext(Context);
   const [cartItems, setCartItems] = useState([]);
-  const [paidItems, setPaidItems] = useState([]); // Хранение id оплаченных товаров
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  
+  const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   useEffect(() => {
     const loadCartItems = async () => {
@@ -31,42 +29,38 @@ const Cart = () => {
     loadCartItems();
   }, []);
 
-  // Функция обработки оплаты для конкретного товара
-  const handlePay = async (itemId, amount) => {
-    const currentBalance = Number(user.balance || 0);
-    console.log("Текущий баланс:", currentBalance, "Цена товара:", amount);
-    
-    if (currentBalance < amount) {
-      alert("Недостаточно средств на балансе для оплаты.");
-      return;
-    }
-    
+  // Функция для оплаты всей корзины
+  const handlePayForCart = async () => {
     try {
-      const updatedData = await $authHost.post('api/user/pay', { itemId, amount });
-      console.log("Ответ от API (processPayment):", updatedData);
-  
+      const data = await payForCart();
+      console.log("Результат оплаты:", data);
+      
+      // Обновляем баланс пользователя
       runInAction(() => {
         user.setUser({
           ...user.user,
-          balance: updatedData.balance
+          balance: data.balance
         });
-        setPaidItems((prev) => [...prev, itemId]);
       });
+      
+      // Обновляем состояние корзины: для всех товаров, которые ожидали оплаты, устанавливаем paymentStatus = "paid"
+      setCartItems((prevItems) =>
+        prevItems.map((item) =>
+          item.paymentStatus !== "paid" ? { ...item, paymentStatus: "paid" } : item
+        )
+      );
     } catch (err) {
-      console.error("Ошибка при оплате:", err);
-      alert("Не удалось обработать оплату.");
+      console.error("Ошибка при оплате корзины:", err);
+      alert("Не удалось провести оплату.");
     }
   };
-  
 
   if (loading) {
     return <Spinner animation="border" role="status" className="mt-3" />;
   }
-
   if (error) {
     return <Alert variant="danger" className="mt-3">{error}</Alert>;
   }
-
   if (cartItems.length === 0) {
     return (
       <Alert variant="info" className="mt-3">
@@ -74,6 +68,9 @@ const Cart = () => {
       </Alert>
     );
   }
+
+  // Отбираем товары, ожидающие оплаты (где paymentStatus !== "paid")
+  const pendingItems = cartItems.filter(item => item.paymentStatus !== "paid");
 
   return (
     <Container className="mt-5">
@@ -85,8 +82,7 @@ const Cart = () => {
           const productImage =
             product && product.img
               ? `${baseUrl}/${product.img}`
-              : 'fallback-image.jpg';
-
+              : "fallback-image.jpg";
           return (
             <Col key={item.id} xs={12} sm={6} md={4} lg={3} className="mb-4">
               <Card className="h-100">
@@ -94,16 +90,10 @@ const Cart = () => {
                 <Card.Body className="d-flex flex-column">
                   <Card.Title>{product ? product.name : "Неизвестный товар"}</Card.Title>
                   <Card.Text>Цена: {item.totalAmount} руб.</Card.Text>
-                  {paidItems.includes(item.id) ? (
+                  {item.paymentStatus === "paid" ? (
                     <Alert variant="success" className="mt-2 p-1">Оплачено</Alert>
                   ) : (
-                    <Button 
-                      variant="primary" 
-                      className="mt-2"
-                      onClick={() => handlePay(item.id, item.totalAmount)}
-                    >
-                      Оплатить
-                    </Button>
+                    <Alert variant="warning" className="mt-2 p-1">Ожидает оплаты</Alert>
                   )}
                 </Card.Body>
               </Card>
@@ -111,6 +101,15 @@ const Cart = () => {
           );
         })}
       </Row>
+      
+      {/* Кнопка оплаты отображается только если есть товары, ожидающие оплаты */}
+      {pendingItems.length > 0 && (
+        <div className="text-center mt-4">
+          <Button variant="primary" onClick={handlePayForCart}>
+            Оплатить всю корзину
+          </Button>
+        </div>
+      )}
     </Container>
   );
 };

@@ -24,3 +24,10 @@ export const clearCart = async () => {
   const { data } = await $authHost.delete('/api/cart/clear');
   return data;
 };
+
+// Оплата товаров в корзине: списывает с покупателя средства и обновляет статус оплаты
+export const payForCart = async () => {
+  const { data } = await $authHost.post('/api/cart/pay');
+  // Ожидается, что сервер вернёт, например, { message: 'Оплата прошла успешно...', balance: новыйБаланс }
+  return data;
+};

@@ -5,13 +5,12 @@ const authMiddleware = require('../middleware/authMiddleware'); // Автори�
 
 // Получение корзины
 router.get('/', authMiddleware, cartController.getCart);
-
 // Добавление товара в корзину
 router.post('/', authMiddleware, cartController.addToCart);
-
+// Маршрут оплаты корзины:
+router.post("/pay", authMiddleware, cartController.payForCart);
 // Удаление товара из корзины
 router.delete('/:cartItemId', authMiddleware, cartController.removeFromCart);
-
 // Очистка корзины
 router.delete('/clear', authMiddleware, cartController.clearCart);
 

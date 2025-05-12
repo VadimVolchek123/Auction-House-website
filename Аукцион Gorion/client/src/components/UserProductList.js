@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { Container, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { Context } from "../index";
 import { fetchProductsWithoutAuctionBySeller } from "../http/productAPI";
-import ProductL from "../components/ProductL";
+import ProductUserList from "../components/ProductUserList";
 import { observer } from "mobx-react-lite";
 
 const UserProductsWithoutAuction = observer(() => {
@@ -15,13 +15,10 @@ const UserProductsWithoutAuction = observer(() => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Параметры пагинации
+  // Задаём параметры для получения ВСЕХ товаров
   const page = 1;
-  const limit = 5;
-  
-  console.log("Контекст пользователя (ID):", user);
-    
-  // Если данные пользователя ещё не загружены — показываем индикатор загрузки
+  const limit = 1000; // высокий лимит для получения всех товаров
+
   if (!user) {
     return (
       <Container className="text-center py-5">
@@ -31,7 +28,6 @@ const UserProductsWithoutAuction = observer(() => {
     );
   }
   
-  // Проверяем наличие идентификатора пользователя
   if (!user._id) {
     return (
       <Container className="py-5">
@@ -44,7 +40,11 @@ const UserProductsWithoutAuction = observer(() => {
     const fetchData = async () => {
       try {
         // Используем _id пользователя как sellerId
-        const { productsWithoutAuction, count } = await fetchProductsWithoutAuctionBySeller(user._id, page, limit);
+        const { productsWithoutAuction, count } = await fetchProductsWithoutAuctionBySeller(
+          user._id,
+          page,
+          limit
+        );
         setProducts(productsWithoutAuction);
         setCount(count);
       } catch (err) {
@@ -83,7 +83,17 @@ const UserProductsWithoutAuction = observer(() => {
           {products.length === 0 ? (
             <Alert variant="info">Нет товаров для отображения.</Alert>
           ) : (
-            <ProductL products={products} />
+            // Оборачиваем список товаров в контейнер с горизонтальной прокруткой и отключенным переносом
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "nowrap",
+                overflowX: "auto",
+                paddingBottom: "1rem"
+              }}
+            >
+              <ProductUserList products={products} />
+            </div>
           )}
           <p>Всего товаров: {count}</p>
         </Col>

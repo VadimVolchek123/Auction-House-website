@@ -7,16 +7,36 @@ export const createAuction = async (auctionData) => {
   return data;
 };
 
-// Получение всех аукционов (возвращаются только активные)
-export const fetchAllAuctions = async (page = 1, limit = 10) => {
-  const { data } = await $host.get('/api/auction', {
-    params: { page, limit },
-  });
-  // Ожидается, что сервер вернёт объект вида { rows: [...], count: N }
-  // Фильтруем аукционы: исключаем завершённые (например, status === 'FINISHED')
-  const activeAuctions = data.rows.filter(auction => auction.status !== 'FINISHED');
-  return { rows: activeAuctions, count: activeAuctions.length };
+export const fetchAllAuctions = async (page = 1, limit = 5) => {
+  try {
+    const { data } = await $host.get("/api/auction", {
+      params: { page, limit },
+    });
+    
+    // Если data не определено или не имеет ожидаемой структуры, возвращаем пустой массив и count = 0.
+    if (!data) {
+      return { rows: [], count: 0 };
+    }
+    
+    // Если сервер возвращает данные в формате findAndCountAll, то данные могут быть в data.rows
+    let auctions = [];
+    if (data.rows && Array.isArray(data.rows)) {
+      auctions = data.rows;
+    } else if (Array.isArray(data)) {
+      // Если data уже массив
+      auctions = data;
+    } else if (data.auctions && Array.isArray(data.auctions)) {
+      // На случай, если сервер вернул объект с ключом auctions
+      auctions = data.auctions;
+    }
+    const count = data.count || auctions.length;
+    return { rows: auctions, count };
+  } catch (error) {
+    console.error("Ошибка получения аукционов:", error);
+    throw error;
+  }
 };
+
 
 // Получение информации об определённом аукционе по его ID
 export const fetchAuctionById = async (auctionId) => {
